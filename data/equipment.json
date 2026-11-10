@@ -1,0 +1,111 @@
+{
+  "armor": [
+    {
+      "id": "uniforme",
+      "name": "Uniforme escolar",
+      "defBonus": 0,
+      "speedBonus": 0,
+      "evasionBonus": 0,
+      "description": "El uniforme de siempre. Cómodo, pero no protege de casi nada."
+    },
+    {
+      "id": "chaqueta_cuero",
+      "name": "Chaqueta de cuero",
+      "defBonus": 2,
+      "speedBonus": 0,
+      "evasionBonus": 0,
+      "description": "Cuero gastado y bolsillos llenos de tickets del cine."
+    },
+    {
+      "id": "traje_lona",
+      "name": "Traje de lona",
+      "defBonus": 3,
+      "speedBonus": 1,
+      "evasionBonus": 0,
+      "description": "Lona reforzada y flexible. Protege un poco sin frenarte."
+    },
+    {
+      "id": "chaleco_blindado",
+      "name": "Chaleco blindado",
+      "defBonus": 4,
+      "speedBonus": 0,
+      "evasionBonus": 0,
+      "description": "Prestado por un confidente. Pesa, pero aguanta los golpes."
+    },
+    {
+      "id": "manto_sombra",
+      "name": "Manto de sombra",
+      "defBonus": 5,
+      "speedBonus": 0,
+      "evasionBonus": 0.03,
+      "description": "Tela que difumina la silueta; cambia algo de aguante por evasión."
+    },
+    {
+      "id": "abrigo_sombra",
+      "name": "Abrigo de sombra",
+      "defBonus": 6,
+      "speedBonus": 0,
+      "evasionBonus": 0,
+      "description": "Tela negra que absorbe la luz y amortigua el impacto."
+    },
+    {
+      "id": "armadura_placas",
+      "name": "Armadura de placas",
+      "defBonus": 8,
+      "speedBonus": -2,
+      "evasionBonus": -0.02,
+      "description": "Aguanta golpes brutales, pero te frena y te hace más fácil de alcanzar."
+    }
+  ],
+  "accessories": [
+    {
+      "id": "sin_accesorio",
+      "name": "Sin accesorio",
+      "evasionBonus": 0,
+      "speedBonus": 0,
+      "description": "Nada al cuello. Nada que perder."
+    },
+    {
+      "id": "talisman_rojo",
+      "name": "Talismán rojo",
+      "evasionBonus": 0.02,
+      "speedBonus": 4,
+      "description": "Un talismán de la suerte. Poca evasión extra, mucha velocidad."
+    },
+    {
+      "id": "anillo_sombra",
+      "name": "Anillo de sombra",
+      "evasionBonus": 0.03,
+      "speedBonus": 3,
+      "description": "Frío al tacto. Afina los reflejos y los pasos."
+    },
+    {
+      "id": "amuleto_loco",
+      "name": "Amuleto del Loco",
+      "evasionBonus": 0.05,
+      "speedBonus": 1,
+      "description": "Un colgante torcido que te vuelve un poco más difícil de atrapar."
+    },
+    {
+      "id": "pendiente_rojo",
+      "name": "Pendiente rojo",
+      "evasionBonus": 0.08,
+      "speedBonus": 0,
+      "description": "Rojo como el acento de Shibuya. Te hace escurridizo."
+    },
+    {
+      "id": "brazalete_cazador",
+      "name": "Brazalete de cazador",
+      "evasionBonus": 0.1,
+      "speedBonus": -1,
+      "description": "Ajusta los reflejos para esquivar, pero pesa en los pies."
+    },
+    {
+      "id": "cadena_ritual",
+      "name": "Cadena ritual",
+      "evasionBonus": 0.12,
+      "speedBonus": 0,
+      "description": "Eslabones negros que desvían la mirada de las sombras."
+    }
+  ]
+}

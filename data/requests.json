@@ -1,0 +1,62 @@
+[
+  {
+    "id": "gato_vecina",
+    "title": "El gato de la vecina",
+    "client": "Sra. Kobayashi",
+    "location": "Callejón de Shibuya",
+    "summary": "Un gato negro no ha vuelto a casa desde ayer.",
+    "objective": "Encuéntralo antes de que anochezca.",
+    "reward": "¥ 8,000",
+    "status": "pending"
+  },
+  {
+    "id": "ruido_contenedores",
+    "title": "Ruido en el callejón",
+    "client": "Dueño del konbini",
+    "location": "Trastienda del konbini",
+    "summary": "Algo golpea los contenedores cada noche.",
+    "objective": "Investiga el callejón detrás de la tienda.",
+    "reward": "¥ 12,000",
+    "status": "pending"
+  },
+  {
+    "id": "carta_sin_remitente",
+    "title": "La carta sin remitente",
+    "client": "Repartidor novato",
+    "location": "Estación de Shibuya",
+    "summary": "Una carta lleva tres días esperando a su dueño.",
+    "objective": "Encuentra a quién va dirigida.",
+    "reward": "¥ 5,000",
+    "status": "pending"
+  },
+  {
+    "id": "tickets_cine",
+    "title": "Tickets para el cine",
+    "client": "Estudiante de intercambio",
+    "location": "Cine de Shibuya",
+    "summary": "Necesitaba dos entradas para el estreno.",
+    "objective": "Consigue las entradas antes de la función.",
+    "reward": "¥ 3,000",
+    "status": "completed"
+  },
+  {
+    "id": "movil_perdido",
+    "title": "El móvil perdido",
+    "client": "Yuki",
+    "location": "Estación de Shibuya",
+    "summary": "Se le cayó el móvil en el andén.",
+    "objective": "Recupéralo en objetos perdidos.",
+    "reward": "¥ 6,000",
+    "status": "completed"
+  },
+  {
+    "id": "sombra_callejon",
+    "title": "Sombra en el callejón",
+    "client": "Comerciante",
+    "location": "Callejón de Shibuya",
+    "summary": "Una sombra asustaba a los clientes.",
+    "objective": "Derrota a la sombra.",
+    "reward": "¥ 15,000",
+    "status": "completed"
+  }
+]

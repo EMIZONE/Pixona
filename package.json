@@ -1,0 +1,18 @@
+{
+  "name": "pixona",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PIXONA - motor de combate por turnos con interfaz estilo Persona. HTML/CSS/JS sin bundler.",
+  "type": "module",
+  "scripts": {
+    "start": "powershell -NoProfile -ExecutionPolicy Bypass -File ./serve.ps1 -Open",
+    "serve": "powershell -NoProfile -ExecutionPolicy Bypass -File ./serve.ps1"
+  },
+  "keywords": [
+    "rpg",
+    "turn-based",
+    "canvas",
+    "persona"
+  ],
+  "license": "UNLICENSED"
+}

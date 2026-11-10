@@ -1,0 +1,78 @@
+flowchart LR
+    subgraph ENTRY["ENTRADA"]
+        HTML["index.html<br/>canvas + capas de UI + overlays"]
+        CSS["css/main.css<br/>todos los estilos y animaciones"]
+    end
+
+    subgraph BOOT["ARRANQUE"]
+        MAIN["js/main.js<br/>carga assets, crea objetos,<br/>render loop 1920x1080, teclas"]
+        LOADER["js/utils/DataLoader.js<br/>fetch de JSON e imágenes"]
+    end
+
+    subgraph LOGIC["LÓGICA DE JUEGO"]
+        FIGHTER["js/logic/Fighter.js<br/>HP/SP, stats, equipo,<br/>daño, evasión, bloqueo, ítems"]
+        ENGINE["js/logic/BattleEngine.js<br/>turnos, ataques, pausas,<br/>victoria/derrota"]
+        FLOW["js/logic/BattleFlow.js<br/>run de 5 sombras, curación,<br/>totales, transición y resultados"]
+    end
+
+    subgraph UI["INTERFAZ"]
+        UIC["js/ui/UIController.js<br/>barras, log, daño flotante,<br/>turno y golpes"]
+        BMENU["js/ui/BattleMenu.js<br/>botones de acción y teclado"]
+        BANNER["js/ui/TurnBanner.js<br/>banda y chip de turno"]
+        MMENU["js/ui/MainMenu.js<br/>opciones, paneles, equipo,<br/>tema y tamaño de letra"]
+        TRANS["js/ui/EncounterTransition.js<br/>fade negro + tarjeta sombra"]
+        RESULT["js/ui/ResultScreen.js<br/>EXP, dinero, botín, reinicio"]
+        DOM["js/utils/dom.js<br/>createNode / createButton"]
+    end
+
+    subgraph GFX["GRÁFICOS"]
+        SPRITE["js/graphics/SpriteAnimator.js<br/>frames, playOnce, contorno"]
+        SHADOW["js/graphics/GroundShadow.js<br/>óvalo de sombra"]
+        BG["js/graphics/BackgroundRenderer.js<br/>fondo 1920x1080 + cover"]
+    end
+
+    subgraph DATA["DATOS"]
+        JSON["data/*.json<br/>characters · enemies · weapons<br/>equipment · items · requests<br/>animations"]
+        IMG["assets/*.png<br/>hero · enemy · background"]
+    end
+
+    HTML -->|"carga"| CSS
+    HTML -->|"carga como módulo"| MAIN
+    MAIN -->|"importa"| LOADER
+    LOADER -->|"fetch"| JSON
+    LOADER -->|"loadImage"| IMG
+
+    MAIN -->|"importa y crea"| FIGHTER
+    MAIN -->|"importa y crea"| FLOW
+    MAIN -->|"importa y crea"| UIC
+    MAIN -->|"importa y crea"| MMENU
+    MAIN -->|"importa y crea"| TRANS
+    MAIN -->|"importa y crea"| RESULT
+    MAIN -->|"importa y crea"| SPRITE
+    MAIN -->|"importa y crea"| SHADOW
+    MAIN -->|"importa y crea"| BG
+
+    FLOW -->|"crea"| ENGINE
+    FLOW -->|"crea Fighter enemigo"| FIGHTER
+    FLOW -->|"pide transición"| TRANS
+    FLOW -->|"pide resultados"| RESULT
+
+    ENGINE -->|"lee y modifica"| FIGHTER
+    ENGINE -->|"actualiza barras y log"| UIC
+    ENGINE -->|"playOnce attack / hurt"| SPRITE
+    ENGINE -->|"al terminar"| FLOW
+
+    UIC -->|"importa"| BMENU
+    UIC -->|"importa"| BANNER
+    UIC -->|"importa"| DOM
+    MMENU -->|"importa"| DOM
+    RESULT -->|"importa"| DOM
+
+    BMENU -->|"onActionSelect"| ENGINE
+    MMENU -->|"equipa, ítem, tema<br/>vía callbacks de main"| FIGHTER
+    MMENU -->|"repinta paneles"| DOM
+
+    SPRITE -->|"lee fps y frames"| JSON
+    SPRITE -->|"dibuja en canvas"| HTML
+    SHADOW -->|"dibuja en canvas"| HTML
+    BG -->|"dibuja en canvas"| HTML

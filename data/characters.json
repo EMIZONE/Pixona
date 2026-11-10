@@ -1,0 +1,35 @@
+{
+  "player": {
+    "id": "hero_01",
+    "name": "JUGADOR",
+    "description": "Estudiante de Shibuya que se niega a mirar hacia otro lado. Lleva una daga oxidada, una chaqueta de cuero y un Loco dentro.",
+    "maxHp": 100,
+    "maxSp": 50,
+    "atk": 25,
+    "def": 8,
+    "speed": 14,
+    "evasion": 0.15,
+    "blockReduce": 0.5,
+    "weapon": "daga_oxidada",
+    "armor": "chaqueta_cuero",
+    "accessory": "amuleto_loco",
+    "persona": {
+      "name": "PIXONA",
+      "arcana": "El Loco",
+      "level": 12,
+      "description": "Una sombra rebelde nacida de tu inconformidad. Su máscara sonríe mientras el mundo arde, y no obedece a nadie que no sea tú.",
+      "stats": {
+        "strength": 24,
+        "magic": 18,
+        "endurance": 20,
+        "agility": 22,
+        "luck": 15
+      }
+    },
+    "items": {
+      "potion": 3,
+      "potion_big": 1,
+      "ether": 2
+    }
+  }
+}

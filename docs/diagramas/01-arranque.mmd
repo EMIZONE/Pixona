@@ -1,0 +1,36 @@
+flowchart TD
+    HTML[index.html] --> CSS[css/main.css]
+    HTML --> MAIN[js/main.js]
+
+    DATA[data/*.json<br/>characters, enemies, weapons,<br/>equipment, items, requests, animations]
+    IMG[assets/*.png<br/>hero, enemy, background]
+
+    MAIN -->|Promise.all| DATA
+    MAIN -->|Promise.all| IMG
+    DATA --> CAT[catalogs<br/>items + weapons + equipment]
+    CAT --> FIGHTER[Fighter<br/>jugador]
+
+    MAIN --> ENGINE[BattleEngine]
+    MAIN --> FLOW[BattleFlow]
+    MAIN --> UI[UIController]
+    MAIN --> MENU[MainMenu]
+    MAIN --> TRANS[EncounterTransition]
+    MAIN --> RESULT[ResultScreen]
+    MAIN --> ANIM[SpriteAnimator]
+    MAIN --> SHADOW[GroundShadow]
+    MAIN --> BG[BackgroundRenderer]
+
+    ENGINE --> FIGHTER
+    ENGINE --> UI
+    FLOW --> ENGINE
+    FLOW --> TRANS
+    FLOW --> RESULT
+    UI --> BANNER[TurnBanner]
+    MENU --> FIGHTER
+    MENU --> CAT
+    ANIM --> ANIMS[(animations.json)]
+    MAIN --> LOOP[startRenderLoop]
+
+    LOOP --> BG
+    LOOP --> SHADOW
+    LOOP --> ANIM

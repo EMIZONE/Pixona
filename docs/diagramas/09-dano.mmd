@@ -1,0 +1,9 @@
+flowchart LR
+    A[atacante] --> EVA{esquiva?<br/>evasion + 0.5 si DODGE}
+    EVA -->|sí| MISS[0 daño]
+    EVA -->|no| RAW[raw = max 1, atk - def]
+    RAW --> BLOCK{bloqueo?}
+    BLOCK -->|sí| RED[daño = max 1, raw * 1 - reducción]
+    BLOCK -->|no| HIT[daño = raw]
+    RED --> HP[HP clamp a 0]
+    HIT --> HP

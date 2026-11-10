@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> INIT
+    INIT --> PLAYER_TURN: enter enemigo + start
+    PLAYER_TURN --> RESOLVING: executePlayerAction
+    RESOLVING --> PLAYER_TURN: acción rechazada
+    RESOLVING --> ENEMY_TURN: acción aceptada
+    ENEMY_TURN --> PLAYER_TURN: ataque o bloqueo
+    RESOLVING --> VICTORY: enemigo a 0 HP
+    ENEMY_TURN --> DEFEAT: jugador a 0 HP
+    VICTORY --> [*]
+    DEFEAT --> [*]

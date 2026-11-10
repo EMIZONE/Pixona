@@ -1,0 +1,18 @@
+flowchart TD
+    OPEN[open] --> RENDER[renderPanel opción 0]
+    RENDER --> IN[playPanelEnter<br/>tarjeta fade + slide]
+    IN --> ZONE{zona}
+    ZONE -->|options| NAV[Arrow arriba/abajo<br/>selectOption]
+    ZONE -->|rows| ROWS[focusRow / moveRow]
+    NAV --> SWAP{opción distinta}
+    SWAP -->|sí| OUT[playPanelSwap<br/>is-leaving 160 ms]
+    OUT --> RENDER
+    SWAP -->|no| RENDER
+    NAV -->|Enter / derecha| ACTIVATE[activateOption]
+    ACTIVATE -->|panel con filas| ROWS
+    ROWS -->|Enter| ACTION[equipar, tema, tamaño, objeto]
+    ACTION --> REFRESH[refreshPanel<br/>sin animación de tarjeta]
+    ROWS -->|Esc / izquierda| BACK[backToOptions]
+    BACK -->|categoría abierta| CLOSE[closeGearCategory]
+    BACK -->|si no| NAV
+    ZONE -->|Esc en options| CLOSE_MENU[close]

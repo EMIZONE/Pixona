@@ -1,0 +1,6 @@
+stateDiagram-v2
+    [*] --> Visible
+    Visible --> Leaving: selectOption con índice distinto
+    Leaving --> Rebuild: 160 ms
+    Rebuild --> Entering: playPanelEnter
+    Entering --> Visible: 280 ms

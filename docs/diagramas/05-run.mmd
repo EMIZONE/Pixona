@@ -1,0 +1,15 @@
+flowchart TD
+    START[flow.start] --> E1[engine.enter enemigo 1]
+    E1 --> B1[engine.start]
+    B1 --> COMBATE{combate}
+    COMBATE -->|derrota| DEFEAT[ResultScreen is-defeat]
+    COMBATE -->|victoria| REWARD[xp, money, drop]
+    REWARD --> INDEX{índice menor que 5}
+    INDEX -->|sí| FADE[EncounterTransition.play]
+    FADE --> HEAL[restaurar HP y SP]
+    HEAL --> ADVANCE[advance: siguiente Fighter y enter]
+    ADVANCE --> NEXT[tarjeta de encuentro]
+    NEXT --> COMBATE
+    INDEX -->|no, sombra 5| RESULT[ResultScreen completo]
+    RESULT --> RESTART[reiniciar = recargar página]
+    DEFEAT --> RESTART

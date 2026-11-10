@@ -1,0 +1,41 @@
+flowchart TD
+    ROOT[Pixona]
+    ROOT --> IDX[index.html]
+    ROOT --> CSS[css/main.css]
+    ROOT --> JS[js]
+    ROOT --> DATA[data]
+    ROOT --> ASSETS[assets]
+    ROOT --> DOCS[docs]
+    ROOT --> SRV[serve.ps1 / start.bat / package.json]
+
+    JS --> MAIN[main.js]
+    JS --> LOGIC[logic]
+    JS --> UI[ui]
+    JS --> GFX[graphics]
+    JS --> UTILS[utils]
+
+    LOGIC --> L1[Fighter.js]
+    LOGIC --> L2[BattleEngine.js]
+    LOGIC --> L3[BattleFlow.js]
+
+    UI --> U1[UIController.js]
+    UI --> U2[BattleMenu.js]
+    UI --> U3[TurnBanner.js]
+    UI --> U4[MainMenu.js]
+    UI --> U5[EncounterTransition.js]
+    UI --> U6[ResultScreen.js]
+
+    GFX --> G1[SpriteAnimator.js]
+    GFX --> G2[BackgroundRenderer.js]
+    GFX --> G3[GroundShadow.js]
+
+    UTILS --> T1[DataLoader.js]
+    UTILS --> T2[dom.js]
+
+    DATA --> D1[characters.json]
+    DATA --> D2[enemies.json]
+    DATA --> D3[weapons.json]
+    DATA --> D4[equipment.json]
+    DATA --> D5[items.json]
+    DATA --> D6[requests.json]
+    DATA --> D7[animations.json]

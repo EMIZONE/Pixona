@@ -1,0 +1,65 @@
+flowchart TD
+    subgraph BOOT["ARRANQUE"]
+        HTML["index.html"] --> MAIN["js/main.js"]
+        MAIN --> LOAD["Promise.all<br/>7 JSON + 3 PNG"]
+        LOAD --> CAT["catalogs<br/>items · weapons · equipment"]
+        CAT --> FIGHTER["Fighter<br/>jugador"]
+        MAIN --> ENGINE["BattleEngine"]
+        MAIN --> FLOW["BattleFlow"]
+        MAIN --> UI["UIController"]
+        MAIN --> MENU["MainMenu"]
+    end
+
+    subgraph BATTLE["COMBATE"]
+        ENGINE -->|"enter + start"| TURN{"turno"}
+        TURN -->|"jugador"| ACTION["executePlayerAction"]
+        ACTION --> RESOLVE{"acción aceptada"}
+        RESOLVE -->|"no"| TURN
+        RESOLVE -->|"sí"| DMG["daño + animación<br/>recoil + log"]
+        DMG --> WIN{"¿HP enemigo 0?"}
+        WIN -->|"sí"| VICTORY["VICTORY"]
+        WIN -->|"no"| ENEMY["ENEMY_TURN<br/>850 ms"]
+        ENEMY -->|"ataca 70%"| EDMG["daño al jugador"]
+        ENEMY -->|"bloquea 30%"| EBLOCK["bloqueo"]
+        EDMG --> LOSE{"¿HP jugador 0?"}
+        EBLOCK --> LOSE
+        LOSE -->|"sí"| DEFEAT["DEFEAT"]
+        LOSE -->|"no"| TURN
+    end
+
+    subgraph RUN["RUN DE 5 SOMBRAS"]
+        VICTORY --> REWARD["xp · money · drop"]
+        REWARD --> LAST{"¿sombra 5?"}
+        LAST -->|"no"| TRANS["EncounterTransition<br/>fade"]
+        TRANS --> HEAL["restaurar HP/SP"]
+        HEAL --> NEXT["siguiente enemigo"]
+        NEXT --> TURN
+        LAST -->|"sí"| RESULT["ResultScreen<br/>totales y botín"]
+        DEFEAT --> RESULT2["ResultScreen<br/>is-defeat"]
+    end
+
+    subgraph MENUFLOW["MENÚ PRINCIPAL"]
+        MENU --> OPT["opciones<br/>OBJETO · PERSONA · STATS<br/>CONFIDENT · REQUEST<br/>CALENDARIO · SISTEMA"]
+        OPT --> PANEL["renderPanel<br/>tarjeta de detalle"]
+        PANEL --> SWAP["flechas: sale 160 ms<br/>repinta y entra 280 ms"]
+        PANEL --> ROWS["filas: equipar · tema · tamaño · objeto"]
+    end
+
+    subgraph DATA["DATOS Y GRÁFICOS"]
+        JSONF["data/*.json"]
+        ASSETF["assets/*.png"]
+        ANIMF["animations.json"]
+        SPRITE["SpriteAnimator"]
+        SHADOW["GroundShadow"]
+        BG["BackgroundRenderer"]
+        LOOP["startRenderLoop<br/>1920x1080"]
+    end
+
+    JSONF --> LOAD
+    ASSETF --> LOAD
+    ANIMF --> SPRITE
+    LOOP --> BG
+    LOOP --> SHADOW
+    LOOP --> SPRITE
+    RESULT -->|"reiniciar"| HTML
+    RESULT2 -->|"reiniciar"| HTML

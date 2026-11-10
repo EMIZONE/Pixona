@@ -1,0 +1,38 @@
+{
+  "hero": {
+    "frameWidth": 48,
+    "frameHeight": 48,
+    "animations": {
+      "idle": {
+        "frames": [0, 1, 2, 3],
+        "fps": 8
+      },
+      "attack": {
+        "frames": [4, 5, 6, 7],
+        "fps": 8
+      }
+    }
+  },
+  "enemy": {
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "animations": {
+      "idle": {
+        "frames": [0, 1, 2, 3],
+        "fps": 6
+      },
+      "attack": {
+        "frames": [4, 5, 6, 7],
+        "fps": 9
+      },
+      "hurt": {
+        "frames": [8, 9, 10, 11],
+        "fps": 14
+      },
+      "defeat": {
+        "frames": [12, 13, 14, 15],
+        "fps": 9
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+flowchart LR
+    subgraph Logica
+        F[Fighter] --> E[BattleEngine] --> FL[BattleFlow]
+    end
+    subgraph UI
+        UI1[UIController] --> TB[TurnBanner]
+        BM[BattleMenu]
+        MM[MainMenu]
+        ET[EncounterTransition]
+        RS[ResultScreen]
+    end
+    subgraph Graficos
+        SA[SpriteAnimator]
+        GS[GroundShadow]
+        BR[BackgroundRenderer]
+    end
+    subgraph Utilidades
+        DL[DataLoader]
+        DOM[dom.js]
+    end
+    FL --> ET
+    FL --> RS
+    E --> UI1
+    E --> BM
+    MAIN[main.js] --> Logica
+    MAIN --> UI
+    MAIN --> Graficos
+    Logica --> Utilidades
+    UI --> Utilidades

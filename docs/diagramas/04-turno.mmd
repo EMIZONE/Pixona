@@ -1,0 +1,33 @@
+sequenceDiagram
+    actor P as Jugador
+    participant BM as BattleMenu
+    participant E as BattleEngine
+    participant F as Fighter
+    participant UI as UIController
+    participant A as SpriteAnimator
+
+    P->>BM: tecla o clic
+    BM->>E: executePlayerAction
+    E->>E: state = RESOLVING
+    E->>F: resolvePlayerAction
+    alt acción rechazada
+        F-->>E: false
+        E->>E: state = PLAYER_TURN
+    else acción aceptada
+        F-->>E: resultado
+        E->>UI: updateBars + showHit
+        E->>A: playOnce attack 600 ms
+        E->>F: takeRecoil si el arma lo tiene
+        E->>UI: updateLog
+        E->>E: TURN_PAUSE 250 ms
+        E->>E: state = ENEMY_TURN
+        E->>E: ENEMY_THINK_TIME 850 ms
+        alt enemigo ataca 70%
+            E->>A: attack + hurt
+            E->>F: takeDamage
+        else enemigo bloquea 30%
+            E->>F: setBlocking
+        end
+        E->>E: TURN_PAUSE 250 ms
+        E->>E: state = PLAYER_TURN
+    end

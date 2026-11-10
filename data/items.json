@@ -1,0 +1,17 @@
+{
+  "potion": {
+    "name": "Poción",
+    "heal": 40,
+    "description": "Restaura 40 HP."
+  },
+  "potion_big": {
+    "name": "Poción grande",
+    "heal": 80,
+    "description": "Restaura 80 HP. Guarda una para emergencias."
+  },
+  "ether": {
+    "name": "Éter",
+    "sp": 20,
+    "description": "Restaura 20 SP."
+  }
+}

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PIXONA: motor de combate por turnos con estética Persona. HTML, CSS y JavaScript puro.">
+  <meta name="color-scheme" content="dark">
+  <title>PIXONA Engine - Battle System</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Destello de impacto: capa entre la escena y el HUD. -->
+    <div id="hit-flash" aria-hidden="true"></div>
+
+    <div id="ui-layer">
+      <!-- Columna izquierda: acciones del combate + ficha del jugador.
+           Se apilan en flex para que el texto L/XL nunca las solape. -->
+      <div class="battle-actions">
+        <nav id="battle-menu" class="persona-menu">
+          <button class="menu-btn" data-action="ATTACK">ATACAR</button>
+          <button class="menu-btn" data-action="SKILL">HABILIDAD (15 SP)</button>
+          <button class="menu-btn" data-action="BLOCK">BLOQUEAR</button>
+          <button class="menu-btn" data-action="DODGE">ESQUIVAR (5 SP)</button>
+          <button class="menu-btn" data-action="ITEM">OBJETO</button>
+        </nav>
+
+        <div class="status-panel player-status">
+          <span class="entity-name">JUGADOR</span>
+          <div class="bar-container">
+            <div id="player-hp-bar" class="bar hp-fill" style="width: 100%;"></div>
+          </div>
+          <span id="player-hp-text" class="bar-text">HP: 100/100</span>
+
+          <div class="bar-container">
+            <div id="player-sp-bar" class="bar sp-fill" style="width: 100%;"></div>
+          </div>
+          <span id="player-sp-text" class="bar-text">SP: 50/50</span>
+        </div>
+      </div>
+
+      <button id="open-menu-btn" class="open-menu-btn" type="button">MENÚ · M</button>
+
+      <!-- Indicador permanente del turno; el anuncio grande es decorativo. -->
+      <div id="turn-chip" class="turn-chip" role="status" aria-live="polite">
+        <span class="turn-chip-dot" aria-hidden="true"></span>
+        <span id="turn-chip-text">TU TURNO</span>
+      </div>
+
+      <section id="battle-log" class="battle-log" aria-live="polite"
+               aria-label="Registro de combate"></section>
+
+      <div class="status-panel enemy-status">
+        <span class="entity-name">ENEMIGO</span>
+        <div class="bar-container">
+          <div id="enemy-hp-bar" class="bar hp-fill" style="width: 100%;"></div>
+        </div>
+        <span id="enemy-hp-text" class="bar-text">HP: 120/120</span>
+      </div>
+
+      <!-- Banda central que anuncia cada turno (TurnBanner la controla). -->
+      <div id="turn-banner" class="turn-banner" aria-hidden="true">
+        <div class="turn-banner-band">
+          <span id="turn-banner-kicker" class="turn-banner-kicker">SIGUIENTE</span>
+          <strong id="turn-banner-label" class="turn-banner-label">TU TURNO</strong>
+          <span id="turn-banner-hint" class="turn-banner-hint">ELIGE UNA ACCIÓN</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menú principal a pantalla completa. El contenido de opciones y paneles
+       se construye desde js/ui/MainMenu.js. -->
+  <div id="main-menu" class="main-menu" hidden>
+    <div class="menu-backdrop" data-menu-dismiss aria-hidden="true"></div>
+    <div class="menu-halftone" aria-hidden="true"></div>
+    <div class="menu-portrait" aria-hidden="true"></div>
+
+    <div class="menu-badge" aria-hidden="true">
+      <span class="menu-badge-kicker">MENÚ</span>
+      <span class="menu-badge-title">PRINCIPAL</span>
+      <span class="menu-badge-hint">SELECCIONA UNA OPCIÓN</span>
+    </div>
+
+    <nav id="menu-options" class="menu-options" aria-label="Opciones del menú"></nav>
+
+    <section class="menu-submenu" aria-label="Detalle de la opción">
+      <header class="submenu-head">
+        <h2 id="menu-submenu-title" class="submenu-title">ARMA</h2>
+        <p id="menu-detail" class="submenu-detail">Elige un arma. Solo cambian las estadísticas.</p>
+      </header>
+      <div id="menu-submenu-list" class="submenu-list"></div>
+    </section>
+
+    <div id="menu-stats" class="menu-stats"></div>
+
+    <footer class="menu-footer">
+      <span class="menu-money">¥ 191,576</span>
+      <span class="menu-keys"><b>M</b> CERRAR · <b>ENTER</b> CONFIRMAR · <b>ESC</b> ATRÁS</span>
+    </footer>
+  </div>
+
+  <!-- Fundido entre sombras: la tarjeta se rellena desde EncounterTransition. -->
+  <div id="encounter-overlay" class="encounter-overlay" aria-hidden="true">
+    <div class="encounter-band" aria-hidden="true"></div>
+    <section class="encounter-card">
+      <span id="encounter-count" class="encounter-count">SOMBRA 1 / 5</span>
+      <h2 id="encounter-name" class="encounter-name">SOMBRA ERRANTE</h2>
+      <p id="encounter-quote" class="encounter-quote"></p>
+      <span class="encounter-hint">HP Y SP RESTAURADOS</span>
+    </section>
+  </div>
+
+  <!-- Pantalla final. ResultScreen rellena filas, totales y botín. -->
+  <div id="result-screen" class="result-screen" aria-hidden="true">
+    <div class="result-backdrop" aria-hidden="true"></div>
+    <div class="result-halftone" aria-hidden="true"></div>
+
+    <section class="result-card" role="dialog" aria-modal="true" aria-labelledby="result-title">
+      <header class="result-head">
+        <span id="result-kicker" class="result-kicker">BATALLA COMPLETADA</span>
+        <h2 id="result-title" class="result-title">VICTORIA</h2>
+        <p id="result-subtitle" class="result-subtitle"></p>
+      </header>
+
+      <div id="result-rows" class="result-rows"></div>
+
+      <div class="result-totals">
+        <div class="result-total">
+          <span class="result-total-label">EXP TOTAL</span>
+          <span id="result-xp" class="result-total-value">+0</span>
+        </div>
+        <div class="result-total">
+          <span class="result-total-label">DINERO</span>
+          <span id="result-money" class="result-total-value">¥ 0</span>
+        </div>
+      </div>
+
+      <div class="result-loot-block">
+        <span class="result-section">BOTÍN</span>
+        <div id="result-loot" class="result-loot"></div>
+      </div>
+
+      <button id="result-restart" class="result-restart" type="button">VOLVER A JUGAR</button>
+      <p class="result-hint">ENTER PARA REINICIAR</p>
+    </section>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

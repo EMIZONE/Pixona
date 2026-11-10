@@ -1,0 +1,58 @@
+[
+  {
+    "id": "daga_oxidada",
+    "name": "Daga oxidada",
+    "atkBonus": 0,
+    "defBonus": 0,
+    "recoil": 0,
+    "description": "La que traías puesta. Corta, pero no da miedo."
+  },
+  {
+    "id": "espada_sombra",
+    "name": "Espada de sombra",
+    "atkBonus": 7,
+    "defBonus": 0,
+    "recoil": 0,
+    "description": "Hoja negra que corta más de lo que parece."
+  },
+  {
+    "id": "estoque_veloz",
+    "name": "Estoque veloz",
+    "atkBonus": 9,
+    "defBonus": 1,
+    "recoil": 0,
+    "description": "Estocada limpia: algo menos de daño que una katana, pero no te deja descubierto."
+  },
+  {
+    "id": "katana_alba",
+    "name": "Katana del alba",
+    "atkBonus": 11,
+    "defBonus": -2,
+    "recoil": 0,
+    "description": "Ligera y afilada: cambia defensa por daño."
+  },
+  {
+    "id": "guadana_ritual",
+    "name": "Guadaña ritual",
+    "atkBonus": 15,
+    "defBonus": -4,
+    "recoil": 0,
+    "description": "Peso brutal, golpe brutal. Te deja al descubierto."
+  },
+  {
+    "id": "martillo_penumbra",
+    "name": "Martillo de penumbra",
+    "atkBonus": 18,
+    "defBonus": -6,
+    "recoil": 0,
+    "description": "Demuele armaduras a cambio de defenderte mucho peor."
+  },
+  {
+    "id": "mandoble_sangre",
+    "name": "Mandoble sangriento",
+    "atkBonus": 24,
+    "defBonus": -10,
+    "recoil": 14,
+    "description": "Cada tajo que das te cuesta sangre. Mucho daño, precio alto."
+  }
+]

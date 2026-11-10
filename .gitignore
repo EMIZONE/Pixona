@@ -1,0 +1,19 @@
+# Dependencias y artefactos
+node_modules/
+*.log
+Thumbs.db
+desktop.ini
+
+# Secretos locales (nunca subir claves de API)
+.env
+.env.*
+!.env.example
+
+# Google Drive / sistema
+.gdriveignore
+~$*
+
+# Temporales del editor
+.vscode/
+.idea/
+*.tmp
