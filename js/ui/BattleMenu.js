@@ -1,7 +1,4 @@
-/** Teclas compartidas por teclado y por los controles del juego. */
-const MOVE_DOWN_KEYS = new Set(['ArrowDown', 's', 'S']);
-const MOVE_UP_KEYS = new Set(['ArrowUp', 'w', 'W']);
-const CONFIRM_KEYS = new Set(['Enter', 'z', 'Z']);
+import { navigationAction } from '../utils/keys.js';
 
 /**
  * Menú de acciones del combate (ATACAR / HABILIDAD / …).
@@ -36,16 +33,15 @@ export class BattleMenu {
   handleKeyDown(event) {
     if (!this.enabled) return;
 
-    const key = event.key;
+    const action = navigationAction(event.key);
+    if (!action) return;
 
-    if (MOVE_DOWN_KEYS.has(key)) {
-      event.preventDefault();
+    event.preventDefault();
+    if (action === 'down') {
       this.setFocus((this.selectedIndex + 1) % this.buttons.length);
-    } else if (MOVE_UP_KEYS.has(key)) {
-      event.preventDefault();
+    } else if (action === 'up') {
       this.setFocus((this.selectedIndex - 1 + this.buttons.length) % this.buttons.length);
-    } else if (CONFIRM_KEYS.has(key)) {
-      event.preventDefault();
+    } else if (action === 'confirm') {
       this.triggerSelection();
     }
   }

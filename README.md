@@ -134,11 +134,14 @@ js/ui/BattleMenu.js      menú de combate con teclado y ratón
 js/ui/UIController.js    barras, registro y feedback de turnos/golpes
 js/ui/TurnBanner.js      anuncio central de turno + chip permanente
 js/ui/MainMenu.js        menú principal de pantalla completa
+js/ui/panels/            un panel por archivo: objeto, persona (con el arsenal),
+                         stats, request, calendario, sistema y el decorativo CONFIDENT
 js/ui/EncounterTransition.js  fundido y tarjeta del siguiente oponente
 js/ui/ResultScreen.js    pantalla final de EXP, dinero y botín
 js/graphics/             renderizador del fondo, sombras y animador de sprites
 js/utils/DataLoader.js   carga de JSON e imágenes
 js/utils/dom.js          helpers createNode/createButton para construir DOM
+js/utils/keys.js         mapa de teclas de navegación compartido por los menús
 serve.ps1 / start.bat    servidor de desarrollo local (no se usa en GitHub Pages)
 docs/                    capturas (combate, turnos, golpes, transición, resultados,
                          menú, persona, peticiones, stats, calendario, sistema)
@@ -169,7 +172,8 @@ index.html
     │   │                        └──► ui/TurnBanner.js
     │   ├── ui/EncounterTransition.js
     │   └── ui/ResultScreen.js ─────► utils/dom.js
-    ├── ui/MainMenu.js ─────────────► utils/dom.js
+    ├── ui/MainMenu.js ─────────────► utils/dom.js, utils/keys.js, ui/panels/*.js
+    ├── utils/keys.js ◄───────────── ui/BattleMenu.js
     ├── graphics/BackgroundRenderer.js
     ├── graphics/SpriteAnimator.js
     └── graphics/GroundShadow.js

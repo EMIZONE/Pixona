@@ -39,16 +39,27 @@ const TURN_SCALE_MS = 200;
 const OUTLINE_LIGHT = '#ffffff';
 
 /**
- * Posición de la sombra actual. Las más grandes se corren a la derecha la
- * mitad de su ancho extra para que su borde izquierdo nunca pise al héroe.
+ * Reparto de una entidad en coordenadas del escenario (1920x1080). Las sombras
+ * más grandes se corren a la derecha la mitad de su ancho extra para que su
+ * borde izquierdo nunca pise al héroe.
  */
-function getEnemyLayout(enemyData) {
-  const base = ENTITY_LAYOUT.enemy;
+function entityLayout(side, flow) {
+  const base = ENTITY_LAYOUT[side];
+  if (side === 'player') return base;
+
+  const height = flow.encounter.height;
+  return { ...base, x: base.x + (height - base.height) / 2, height };
+}
+
+/**
+ * Punto del cuerpo (centro del torso) en píxeles de pantalla, para colgar ahí
+ * los números de daño en vez de sobre la ficha de HP.
+ */
+function entityScreenPoint(side, flow, bgRenderer) {
+  const layout = entityLayout(side, flow);
   return {
-    x: base.x + (enemyData.height - base.height) / 2,
-    footY: base.footY,
-    height: enemyData.height,
-    sway: base.sway
+    x: bgRenderer.screenX(layout.x),
+    y: bgRenderer.screenY(layout.footY - layout.height * 0.5)
   };
 }
 
@@ -85,6 +96,15 @@ function readAccent() {
   return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
 }
 
+/** Aplica el acento al documento, a las sombras y al contorno de los sprites. */
+function applyTheme(color, animators, shadows) {
+  document.documentElement.style.setProperty('--accent', color);
+  Object.values(shadows).forEach((shadow) => shadow.setAccent(color));
+  Object.values(animators).forEach((animator) => {
+    animator.setOutlineColors({ light: OUTLINE_LIGHT, accent: color });
+  });
+}
+
 /**
  * Bucle de `requestAnimationFrame`: balanceo idle, HUD que sigue al enemigo,
  * sombras y sprites. Termina cuando se cierra la página.
@@ -102,8 +122,8 @@ function startRenderLoop({ bgRenderer, flow, animators, shadows, enemyStatusEl }
     const deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    const playerPos = ENTITY_LAYOUT.player;
-    const enemyPos = getEnemyLayout(flow.encounter);
+    const playerPos = entityLayout('player');
+    const enemyPos = entityLayout('enemy', flow);
     const enemy = flow.enemy;
 
     if (enemy !== renderedEnemy) {
@@ -200,14 +220,14 @@ async function bootstrap() {
   animators.enemy.setLungeDirection(-1);
 
   // Contorno dinámico: blanco arriba-izquierda y acento abajo-derecha.
-  const accent = readAccent();
-  Object.values(animators).forEach((animator) => {
-    animator.setOutlineColors({ light: OUTLINE_LIGHT, accent });
-  });
+  applyTheme(readAccent(), animators, shadows);
 
   // --- Combate y paneles ----------------------------------------------
   // El callback se ejecuta más tarde, cuando `flow` ya existe.
-  const ui = new UIController((action) => flow.engine.executePlayerAction(action));
+  const ui = new UIController(
+    (action) => flow.engine.executePlayerAction(action),
+    (side) => entityScreenPoint(side, flow, bgRenderer)
+  );
   const flow = new BattleFlow({
     player,
     enemies: assets.enemies,
@@ -231,15 +251,15 @@ async function bootstrap() {
     // El menú no muta el Fighter directamente: estos callbacks aplican el
     // cambio y lo reflejan en el registro de combate.
     onEquipWeapon: (weapon) => {
-      player.equipWeapon(weapon);
+      player.equip('weapon', weapon);
       ui.logAction(`${player.name} equipa ${weapon.name}. ATK ${player.atk} · DEF ${player.def}.`);
     },
     onEquipArmor: (armor) => {
-      player.equipArmor(armor);
+      player.equip('armor', armor);
       ui.logAction(`${player.name} equipa ${armor.name}. DEF ${player.def}.`);
     },
     onEquipAccessory: (accessory) => {
-      player.equipAccessory(accessory);
+      player.equip('accessory', accessory);
       ui.logAction(`${player.name} equipa ${accessory.name}. EVA ${Math.round(player.evasion * 100)}%.`);
     },
     onSelectItem: (itemId, definition) => {
@@ -248,13 +268,7 @@ async function bootstrap() {
     },
 
     // SISTEMA: acento de la interfaz, las sombras y el contorno de los sprites.
-    onAccentChange: (color) => {
-      document.documentElement.style.setProperty('--accent', color);
-      Object.values(shadows).forEach((shadow) => shadow.setAccent(color));
-      Object.values(animators).forEach((animator) => {
-        animator.setOutlineColors({ light: OUTLINE_LIGHT, accent: color });
-      });
-    },
+    onAccentChange: (color) => applyTheme(color, animators, shadows),
     // SISTEMA: tamaño del texto; el HUD de combate limita su crecimiento en CSS.
     onFontChange: (pixels) => {
       document.documentElement.style.fontSize = `${pixels}px`;

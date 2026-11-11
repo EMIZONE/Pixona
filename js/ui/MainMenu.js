@@ -1,4 +1,12 @@
 import { createButton, createNode } from '../utils/dom.js';
+import { navigationAction } from '../utils/keys.js';
+import { calendarPanel } from './panels/calendar.js';
+import { emptyPanel } from './panels/empty.js';
+import { itemsPanel } from './panels/items.js';
+import { personaPanel } from './panels/persona.js';
+import { requestsPanel } from './panels/requests.js';
+import { statsPanel } from './panels/stats.js';
+import { defaultSettings, systemPanel } from './panels/system.js';
 
 /**
  * Menú principal de pantalla completa (estilo Persona).
@@ -6,59 +14,29 @@ import { createButton, createNode } from '../utils/dom.js';
  * Dos zonas de foco: `'options'` (la lista de la izquierda) y `'rows'` (las
  * filas del panel). El menú no guarda estado del juego: al confirmar una fila
  * llama a los callbacks de `main.js` y repinta el panel con los datos ya
- * actualizados del `Fighter`. Cada opción declara el método que dibuja su panel.
+ * actualizados del `Fighter`.
+ *
+ * Cada opción es un panel de `panels/` con la forma `{ label, tall?, render(menu) }`.
+ * El menú les presta las filas (`makeRow` / `addRow` / `sectionLabel`), el
+ * contenedor (`panelList` / `panelDetail` / `panelTitle`) y el repintado
+ * (`renderPanel` / `refreshPanel`), así que un panel nuevo solo necesita un
+ * archivo y una entrada en `OPTIONS`.
  */
 const OPTIONS = [
-  { label: 'OBJETO', render: 'renderItems' },
-  { label: 'PERSONA', render: 'renderPersona' },
-  { label: 'STATS', render: 'renderStats' },
-  { label: 'CONFIDENT', render: 'renderEmpty' },
-  { label: 'REQUEST', render: 'renderRequests' },
-  { label: 'CALENDARIO', render: 'renderCalendar' },
-  { label: 'SISTEMA', render: 'renderSystem' }
+  itemsPanel,
+  personaPanel,
+  statsPanel,
+  emptyPanel,
+  requestsPanel,
+  calendarPanel,
+  systemPanel
 ];
 
-/** Atributos de PIXONA y su etiqueta visible. */
-const STAT_LABELS = [
-  ['strength', 'FUERZA'],
-  ['magic', 'MAGIA'],
-  ['endurance', 'RESISTENCIA'],
-  ['agility', 'AGILIDAD'],
-  ['luck', 'SUERTE']
-];
-
-/** Temas disponibles en SISTEMA. El color se aplica a `--accent`. */
-const THEMES = [
-  { label: 'ROJO', color: '#ff0033' },
-  { label: 'AZUL', color: '#2f6bff' },
-  { label: 'VERDE', color: '#00c46a' },
-  { label: 'ÁMBAR', color: '#ff9f1c' },
-  { label: 'CIAN', color: '#00d4e0' },
-  { label: 'MAGENTA', color: '#ff2ea6' }
-];
-
-/** Tamaños del texto global (S / M / L / XL). */
-const FONT_SIZES = [
-  { id: 's', label: 'PEQUEÑO', px: 14 },
-  { id: 'm', label: 'NORMAL', px: 16 },
-  { id: 'l', label: 'GRANDE', px: 18 },
-  { id: 'xl', label: 'ENORME', px: 21 }
-];
-
-const MONTHS = [
-  'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-  'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
-];
-
-const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
-const DEFAULT_THEME = THEMES[0].color;
-const DEFAULT_FONT_PX = 16;
-const EMPTY_DETAIL = 'No disponible en esta demo.';
-const EMPTY_ROW = '— sin contenido —';
 /** Duraciones alineadas con `.menu-submenu.is-leaving` / `is-entering`. */
 const PANEL_LEAVE_MS = 160;
 const PANEL_ENTER_MS = 280;
+/** Ventana tras el último movimiento real del ratón para aceptar un hover. */
+const HOVER_MOVE_GRACE_MS = 120;
 
 export class MainMenu {
   constructor({
@@ -94,8 +72,7 @@ export class MainMenu {
     this.onClose = onClose;
 
     // Tema y tamaño elegidos en SISTEMA; se aplican al documento por callback.
-    this.accent = DEFAULT_THEME;
-    this.fontPx = DEFAULT_FONT_PX;
+    this.settings = defaultSettings();
 
     // Markup de index.html.
     this.root = document.getElementById('main-menu');
@@ -115,6 +92,8 @@ export class MainMenu {
     this.visible = false;
     // Categoría de equipo abierta dentro de PERSONA ('weapon' | 'armor' | 'accessory').
     this.gearCategory = null;
+    // Se actualiza con cada movimiento real del ratón (ver `hoverOption`).
+    this.pointerMovedAt = 0;
 
     this.build();
   }
@@ -128,7 +107,7 @@ export class MainMenu {
       const button = createButton('menu-option', option.label);
       // Variable CSS que escalona la animación de entrada.
       button.style.setProperty('--option-index', index);
-      button.addEventListener('mouseenter', () => this.selectOption(index));
+      button.addEventListener('mouseenter', () => this.hoverOption(index));
       button.addEventListener('click', () => this.activateOption(index));
       this.optionsEl.appendChild(button);
       return button;
@@ -151,6 +130,12 @@ export class MainMenu {
 
     window.addEventListener('keydown', (event) => {
       if (this.visible) this.handleKey(event);
+    });
+
+    // La opción activa se desplaza 18 px y puede meterse bajo un cursor quieto;
+    // sin este registro, dos opciones se robarían el hover en bucle.
+    window.addEventListener('pointermove', () => {
+      this.pointerMovedAt = performance.now();
     });
   }
 
@@ -195,45 +180,39 @@ export class MainMenu {
    * opciones cierra el menú.
    */
   handleKey(event) {
-    const key = event.key;
+    const action = navigationAction(event.key);
 
-    if (key === 'Escape') {
+    if (action === 'escape') {
       event.preventDefault();
       if (this.zone === 'rows') this.backToOptions();
       else this.close();
       return;
     }
 
-    const down = key === 'ArrowDown' || key === 's' || key === 'S';
-    const up = key === 'ArrowUp' || key === 'w' || key === 'W';
-    const confirm = key === 'Enter' || key === 'z' || key === 'Z';
-    const forward = key === 'ArrowRight' || key === 'd' || key === 'D';
-    const back = key === 'ArrowLeft' || key === 'a' || key === 'A';
-
     if (this.zone === 'rows') {
-      if (down) {
+      if (action === 'down') {
         event.preventDefault();
         this.moveRow(1);
-      } else if (up) {
+      } else if (action === 'up') {
         event.preventDefault();
         this.moveRow(-1);
-      } else if (confirm) {
+      } else if (action === 'confirm') {
         event.preventDefault();
         this.activateRow();
-      } else if (back) {
+      } else if (action === 'back') {
         event.preventDefault();
         this.backToOptions();
       }
       return;
     }
 
-    if (down) {
+    if (action === 'down') {
       event.preventDefault();
       this.selectOption((this.optionIndex + 1) % OPTIONS.length);
-    } else if (up) {
+    } else if (action === 'up') {
       event.preventDefault();
       this.selectOption((this.optionIndex - 1 + OPTIONS.length) % OPTIONS.length);
-    } else if (confirm || forward) {
+    } else if (action === 'confirm' || action === 'forward') {
       event.preventDefault();
       this.activateOption(this.optionIndex);
     }
@@ -249,6 +228,16 @@ export class MainMenu {
   /* ------------------------------------------------------------------ */
   /* Opciones                                                            */
   /* ------------------------------------------------------------------ */
+
+  /**
+   * Hover con intención: solo acepta el cambio si el ratón se movió hace poco.
+   * Evita el bucle entre dos opciones cuando la activa se desplaza 18 px bajo
+   * un cursor quieto.
+   */
+  hoverOption(index) {
+    if (performance.now() - this.pointerMovedAt > HOVER_MOVE_GRACE_MS) return;
+    this.selectOption(index);
+  }
 
   /** Cambia la opción activa (hover o flechas) y dibuja su panel. */
   selectOption(index) {
@@ -276,8 +265,8 @@ export class MainMenu {
   /** Entrada de la tarjeta completa (sin animar el contenido). */
   playPanelEnter() {
     clearTimeout(this.panelEnterTimer);
+    // Reinicia la animación aunque una anterior siga en pantalla.
     this.panel.classList.remove('is-entering');
-    // Reflow para reiniciar la animación al cambiar de opción.
     void this.panel.offsetWidth;
     this.panel.classList.add('is-entering');
     this.panelEnterTimer = setTimeout(() => {
@@ -304,7 +293,7 @@ export class MainMenu {
    */
   backToOptions() {
     if (this.gearCategory) {
-      this.closeGearCategory();
+      personaPanel.back(this);
       return;
     }
 
@@ -329,16 +318,17 @@ export class MainMenu {
   /* ------------------------------------------------------------------ */
 
   /**
-   * Limpia el panel y llama al renderer de la opción activa. `keepIndex`
-   * conserva la fila seleccionada tras un cambio (equipar, cambiar tema…).
+   * Limpia el panel y delega en el panel activo. `keepIndex` conserva la fila
+   * seleccionada tras un cambio (equipar, cambiar tema…).
    */
   renderPanel(keepIndex = 0) {
     const option = OPTIONS[this.optionIndex];
+    this.panel.classList.toggle('is-persona', Boolean(option.tall));
     this.panelTitle.textContent = option.label;
     this.panelList.replaceChildren();
     this.rows = [];
 
-    this[option.render]();
+    option.render(this);
 
     this.rowIndex = Math.min(keepIndex, Math.max(0, this.rows.length - 1));
     this.applyRowHighlight();
@@ -349,12 +339,6 @@ export class MainMenu {
     this.renderPanel(index);
     this.updateStats();
     this.panelDetail.textContent = message;
-  }
-
-  /** Panel vacío para opciones sin contenido (CONFIDENT). */
-  renderEmpty() {
-    this.panelDetail.textContent = EMPTY_DETAIL;
-    this.panelList.appendChild(this.makeEmptyLine(EMPTY_ROW));
   }
 
   /* --- Filas genéricas ------------------------------------------------ */
@@ -389,7 +373,7 @@ export class MainMenu {
   addRow(row, action, preview = action, container = this.panelList) {
     const index = this.rows.length;
 
-    row.addEventListener('mouseenter', () => this.focusRow(index, preview));
+    row.addEventListener('mouseenter', () => this.hoverRow(index, preview));
     row.addEventListener('click', () => {
       this.focusRow(index, preview);
       action();
@@ -398,6 +382,15 @@ export class MainMenu {
     container.appendChild(row);
     this.rows.push({ el: row, action, preview });
     return row;
+  }
+
+  /**
+   * Hover de fila con la misma guarda que las opciones: el texto de detalle
+   * cambia de alto y puede mover las filas bajo un cursor quieto.
+   */
+  hoverRow(index, preview) {
+    if (performance.now() - this.pointerMovedAt > HOVER_MOVE_GRACE_MS) return;
+    this.focusRow(index, preview);
   }
 
   /** Mueve el foco a una fila y actualiza el texto de detalle. */
@@ -413,6 +406,11 @@ export class MainMenu {
     return createNode('p', 'submenu-section', text);
   }
 
+  /** Línea de aviso para los paneles sin contenido. */
+  makeEmptyLine(text) {
+    return createNode('p', 'submenu-empty', text);
+  }
+
   previewRow() {
     this.rows[this.rowIndex].preview();
   }
@@ -421,457 +419,15 @@ export class MainMenu {
     this.rows[this.rowIndex].action();
   }
 
-  /* --- Armas ---------------------------------------------------------- */
+  /* ------------------------------------------------------------------ */
+  /* Datos compartidos por los paneles                                   */
+  /* ------------------------------------------------------------------ */
 
-  /**
-   * Vista previa de un arma. La DEF incluye la armadura actual porque cambiar
-   * de arma no la reemplaza; el delta de ATK compara contra el arma equipada.
-   */
-  describeWeapon(weapon) {
-    const attack = this.player.baseAtk + weapon.atkBonus;
-    const defense = this.player.baseDef + weapon.defBonus + this.player.armor.defBonus;
-    const delta = attack - this.player.atk;
-    const deltaText = delta > 0 ? ` (+${delta})` : delta < 0 ? ` (${delta})` : '';
-    const recoil = weapon.recoil > 0 ? ` · RETROCESO -${weapon.recoil} HP` : '';
-    return `${weapon.description} ATK ${attack}${deltaText} · DEF ${defense}${recoil}`;
-  }
-
-  equipWeapon(weapon) {
-    this.onEquipWeapon(weapon);
-    this.refreshPanel(`${weapon.name} equipada. ${this.describeWeapon(weapon)}`);
-  }
-
-  /* --- Persona y equipo ---------------------------------------------- */
-
-  /**
-   * Panel PERSONA: ranuras de equipo + perfil. Confirmar una ranura despliega
-   * el arsenal completo de esa categoría para comparar todas las piezas.
-   */
-  renderPersona() {
-    if (this.gearCategory) {
-      this.renderGearList(this.gearCategory);
-      return;
-    }
-
-    const { persona } = this;
-    this.panelDetail.textContent = this.personaLine();
-    this.panelList.appendChild(this.sectionLabel('EQUIPAMIENTO'));
-
-    const slots = [
-      ['ARMA', this.player.weapon, 'weapon'],
-      ['ARMADURA', this.player.armor, 'armor'],
-      ['ACCESORIO', this.player.accessory, 'accessory']
-    ];
-
-    slots.forEach(([label, item, category]) => {
-      const config = this.gearConfig(category);
-      const row = this.makeRow(label, { value: item.name, active: true });
-      this.addRow(
-        row,
-        () => this.openGearCategory(category),
-        () => {
-          this.panelDetail.textContent =
-            `${config.describe(item)} ENTER para ver todas las opciones.`;
-        }
-      );
-    });
-
-    this.panelList.appendChild(this.sectionLabel('PERFIL'));
-    this.panelList.appendChild(createNode('p', 'persona-bio', this.profileDescription));
-
-    this.panelList.appendChild(this.sectionLabel(`PERSONA · ${persona.name}`));
-    this.panelList.appendChild(
-      createNode('p', 'persona-bio persona-meta', `Nivel ${persona.level} · Arcano: ${persona.arcana}`)
-    );
-    this.panelList.appendChild(createNode('p', 'persona-bio', persona.description));
-  }
-
-  /** Configuración de una ranura: lista, pieza actual y cómo describir/equipar. */
-  gearConfig(category) {
-    const configs = {
-      weapon: {
-        label: 'ARMA',
-        list: this.weapons,
-        current: this.player.weapon,
-        describe: (item) => this.describeWeapon(item),
-        stats: (item) => this.weaponStats(item),
-        equip: (item) => this.equipWeapon(item)
-      },
-      armor: {
-        label: 'ARMADURA',
-        list: this.equipment.armor,
-        current: this.player.armor,
-        describe: (item) => this.describeArmor(item),
-        stats: (item) => this.armorStats(item),
-        equip: (item) => this.equipArmor(item)
-      },
-      accessory: {
-        label: 'ACCESORIO',
-        list: this.equipment.accessories,
-        current: this.player.accessory,
-        describe: (item) => this.describeAccessory(item),
-        stats: (item) => this.accessoryStats(item),
-        equip: (item) => this.equipAccessory(item)
-      }
-    };
-
-    return configs[category];
-  }
-
-  /** Abre el arsenal de una categoría; el foco arranca en la primera pieza. */
-  openGearCategory(category) {
-    this.gearCategory = category;
-    this.renderPanel(1);
-    this.zone = 'rows';
-    this.applyRowHighlight();
-    this.previewRow();
-  }
-
-  /** Vuelve de la lista de piezas a las ranuras de PERSONA. */
-  closeGearCategory() {
-    const slotIndex = { weapon: 0, armor: 1, accessory: 2 }[this.gearCategory] ?? 0;
-    this.gearCategory = null;
-    this.renderPanel(slotIndex);
-    this.zone = 'rows';
-    this.applyRowHighlight();
-    this.previewRow();
-  }
-
-  /** Lista completa de una categoría, con stats alineados y la pieza activa. */
-  renderGearList(category) {
-    const config = this.gearConfig(category);
-    this.panelTitle.textContent = `PERSONA · ${config.label}`;
-    this.panelDetail.textContent =
-      `${config.list.length} opciones. Elige la que mejor encaje con tu build.`;
-
-    const back = this.makeRow('← VOLVER A PERSONA', { value: 'ESC' });
-    this.addRow(
-      back,
-      () => this.closeGearCategory(),
-      () => { this.panelDetail.textContent = 'Vuelve a las ranuras de equipo.'; }
-    );
-
-    this.panelList.appendChild(
-      this.sectionLabel(`${config.label} · ${config.list.length} OPCIONES`)
-    );
-
-    config.list.forEach((item) => {
-      const row = this.makeRow(item.name, {
-        value: config.stats(item),
-        active: item === config.current
-      });
-      this.addRow(
-        row,
-        () => config.equip(item),
-        () => { this.panelDetail.textContent = `${config.describe(item)} ENTER para equipar.`; }
-      );
-    });
-  }
-
-  /** Stats de un arma con el resto del equipo actual, para comparar de un vistazo. */
-  weaponStats(weapon) {
-    const attack = this.player.baseAtk + weapon.atkBonus;
-    const defense = this.player.baseDef + weapon.defBonus + this.player.armor.defBonus;
-    const recoil = weapon.recoil > 0 ? ` · RETRO -${weapon.recoil}` : '';
-    return `ATK ${attack} · DEF ${defense}${recoil}`;
-  }
-
-  armorStats(armor) {
-    const defense = this.player.baseDef + this.player.weapon.defBonus + armor.defBonus;
-    const speed = armor.speedBonus ? ` · VEL ${this.signed(armor.speedBonus)}` : '';
-    const evasion = armor.evasionBonus
-      ? ` · EVA ${this.signed(Math.round(armor.evasionBonus * 100))}%`
-      : '';
-    return `DEF ${defense}${speed}${evasion}`;
-  }
-
-  accessoryStats(accessory) {
-    const evasion = Math.round(accessory.evasionBonus * 100);
-    return `EVA ${this.signed(evasion)}% · VEL ${this.signed(accessory.speedBonus)}`;
-  }
-
-  signed(value) {
-    return value > 0 ? `+${value}` : `${value}`;
-  }
-
-  describeArmor(armor) {
-    const speed = armor.speedBonus ? ` · VEL ${this.signed(armor.speedBonus)}` : '';
-    const evasion = armor.evasionBonus
-      ? ` · EVA ${this.signed(Math.round(armor.evasionBonus * 100))}%`
-      : '';
-    return `${armor.name}: ${armor.description} DEF +${armor.defBonus}${speed}${evasion}.`;
-  }
-
-  describeAccessory(accessory) {
-    return `${accessory.name}: ${accessory.description} ` +
-      `EVA ${this.signed(Math.round(accessory.evasionBonus * 100))}% · ` +
-      `VEL ${this.signed(accessory.speedBonus)}.`;
-  }
-
-  equipArmor(armor) {
-    this.onEquipArmor(armor);
-    this.refreshPanel(`Armadura: ${armor.name}. DEF ${this.player.def}.`);
-  }
-
-  equipAccessory(accessory) {
-    this.onEquipAccessory(accessory);
-    this.refreshPanel(this.describeAccessory(accessory));
-  }
-
-  /* --- Objetos -------------------------------------------------------- */
-
-  /** Catálogo completo; las cargas a 0 se marcan como vacías pero siguen visibles. */
-  renderItems() {
-    const activeId = this.getActiveItemId();
-
-    Object.entries(this.itemCatalog).forEach(([id, definition]) => {
-      const count = this.player.items[id] ?? 0;
-      const row = this.makeRow(definition.name, {
-        value: `×${count}`,
-        active: id === activeId,
-        empty: count <= 0
-      });
-      this.addRow(
-        row,
-        () => this.selectItem(id, definition),
-        () => this.previewItem(id, definition, count)
-      );
-    });
-
-    const active = this.itemCatalog[activeId];
-    this.panelDetail.textContent = `Activo: ${active.name}. ${active.description}`;
-  }
-
-  /** Vista previa con estado activo y aviso de existencias. */
-  previewItem(id, definition, count) {
-    const suffix = count <= 0 ? ' Sin existencias.' : '';
-    const active = id === this.getActiveItemId() ? ' ACTIVO.' : '';
-    this.panelDetail.textContent = `${definition.name}: ${definition.description}${active}${suffix}`;
-  }
-
-  /** Marca el objeto que usará el comando OBJETO en el combate. */
-  selectItem(itemId, definition) {
-    this.onSelectItem(itemId, definition);
-    this.refreshPanel(
-      `Activo: ${definition.name}. ${definition.description}`,
-      Object.keys(this.itemCatalog).indexOf(itemId)
-    );
-  }
-
-  /* --- Stats ---------------------------------------------------------- */
-
-  /** Línea común de cabecera del Persona. */
+  /** Línea de cabecera del Persona (PERSONA y STATS). */
   personaLine() {
     const { persona } = this;
     return `${persona.name} · Nivel ${persona.level} · Arcano: ${persona.arcana}`;
   }
-
-  /**
-   * Panel STATS: atributos del Persona sobre 99 y derivados reales del
-   * `Fighter` (HP/SP/ATK/DEF/EVA/VEL), más el equipo completo.
-   */
-  renderStats() {
-    this.panelDetail.textContent = this.personaLine();
-
-    const grid = createNode('div', 'stat-grid');
-    STAT_LABELS.forEach(([key, label]) => {
-      const value = this.persona.stats[key];
-      const bar = createNode('span', 'stat-bar');
-      const fill = createNode('span', 'stat-bar-fill');
-      fill.style.width = `${(value / 99) * 100}%`;
-      bar.appendChild(fill);
-
-      const row = createNode('div', 'stat-row');
-      row.append(createNode('span', 'stat-name', label), createNode('span', 'stat-num', value), bar);
-      grid.appendChild(row);
-    });
-    this.panelList.appendChild(grid);
-
-    const player = this.player;
-    const derived = [
-      `HP ${player.currentHp}/${player.maxHp}`,
-      `SP ${player.currentSp}/${player.maxSp}`,
-      `ATK ${player.atk}`,
-      `DEF ${player.def}`,
-      `EVA ${Math.round(player.evasion * 100)}%`,
-      `VEL ${player.speed}`
-    ];
-    const gear = [
-      `ARMA: ${player.weapon.name}`,
-      `ARMADURA: ${player.armor.name}`,
-      `ACCESORIO: ${player.accessory.name}`
-    ];
-    this.panelList.append(
-      createNode('p', 'stat-derived', derived.join(' · ')),
-      createNode('p', 'stat-derived stat-gear', gear.join(' · '))
-    );
-  }
-
-  /* --- Peticiones ----------------------------------------------------- */
-
-  /** Peticiones agrupadas por estado; el contenido es estático. */
-  renderRequests() {
-    const pending = this.requests.filter((request) => request.status === 'pending');
-    const completed = this.requests.filter((request) => request.status === 'completed');
-
-    this.panelDetail.textContent = `${pending.length} pendientes · ${completed.length} completadas.`;
-
-    this.panelList.appendChild(this.sectionLabel(`PENDIENTES · ${pending.length}`));
-    if (pending.length === 0) {
-      this.panelList.appendChild(this.makeEmptyLine('Sin peticiones pendientes.'));
-    }
-    pending.forEach((request) => this.addRequestRow(request));
-
-    this.panelList.appendChild(this.sectionLabel(`COMPLETADAS · ${completed.length}`));
-    if (completed.length === 0) {
-      this.panelList.appendChild(this.makeEmptyLine('Todavía no has completado ninguna.'));
-    }
-    completed.forEach((request) => this.addRequestRow(request));
-  }
-
-  /** Una petición es una fila; las completadas se atenúan. */
-  addRequestRow(request) {
-    const completed = request.status === 'completed';
-    const row = this.makeRow(request.title, {
-      value: completed ? 'COMPLETADA' : request.reward,
-      completed
-    });
-    this.addRow(row, () => this.showRequest(request));
-  }
-
-  showRequest(request) {
-    this.panelDetail.textContent = this.describeRequest(request);
-  }
-
-  /** Detalle de cliente, lugar, objetivo, recompensa y estado. */
-  describeRequest(request) {
-    const status = request.status === 'completed' ? 'COMPLETADA' : 'PENDIENTE';
-    return `${request.client} · ${request.location}. ${request.summary} ` +
-      `${request.objective} Recompensa: ${request.reward}. [${status}]`;
-  }
-
-  /** Línea vacía reutilizada por los paneles sin contenido. */
-  makeEmptyLine(text) {
-    return createNode('p', 'submenu-empty', text);
-  }
-
-  /* --- Calendario ----------------------------------------------------- */
-
-  /**
-   * Calendario del mes real con la semana empezando en lunes. `getDay()`
-   * devuelve 0 para domingo; `(firstWeekday + 6) % 7` deja lunes en la columna
-   * 0. Los días de los meses vecinos rellenan los huecos con `is-outside`.
-   */
-  renderCalendar() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const today = now.getDate();
-
-    this.panelDetail.textContent = 'Días pasados en rojo · hoy en blanco.';
-
-    const grid = createNode('div', 'cal-grid');
-    WEEKDAYS.forEach((label) => {
-      grid.appendChild(createNode('span', 'cal-dow', label));
-    });
-
-    const firstWeekday = new Date(year, month, 1).getDay();
-    const leading = (firstWeekday + 6) % 7;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
-
-    for (let i = 0; i < leading; i++) {
-      grid.appendChild(this.makeDayCell(daysInPrevMonth - leading + i + 1, 'is-outside'));
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const modifier = day < today ? 'is-past' : day === today ? 'is-today' : '';
-      grid.appendChild(this.makeDayCell(day, modifier));
-    }
-
-    const trailing = (7 - ((leading + daysInMonth) % 7)) % 7;
-    for (let i = 1; i <= trailing; i++) {
-      grid.appendChild(this.makeDayCell(i, 'is-outside'));
-    }
-
-    this.panelList.append(createNode('p', 'cal-month', `${MONTHS[month]} ${year}`), grid);
-  }
-
-  makeDayCell(day, modifier) {
-    return createNode('span', modifier ? `cal-day ${modifier}` : 'cal-day', day);
-  }
-
-  /* --- Sistema -------------------------------------------------------- */
-
-  /**
-   * Panel SISTEMA: color de acento, tamaño del texto y restablecer.
-   * Ambos ajustes viven en memoria; al recargar vuelven a los valores por
-   * defecto (no hay localStorage).
-   */
-  renderSystem() {
-    this.panelDetail.textContent = 'Cambia el color de acento y el tamaño del texto.';
-
-    this.panelList.appendChild(this.sectionLabel('COLOR DE LA INTERFAZ'));
-
-    THEMES.forEach((theme) => {
-      const isActive = theme.color === this.accent;
-      const row = this.makeRow(theme.label, {
-        value: isActive ? 'ACTIVO' : '',
-        active: isActive,
-        swatch: theme.color
-      });
-
-      this.addRow(
-        row,
-        () => {
-          this.accent = theme.color;
-          this.onAccentChange(theme.color);
-          this.refreshPanel(`Color de interfaz: ${theme.label.toLowerCase()}.`);
-        },
-        () => { this.panelDetail.textContent = `Color de interfaz: ${theme.label.toLowerCase()}.`; }
-      );
-    });
-
-    this.panelList.appendChild(this.sectionLabel('TAMAÑO DEL TEXTO'));
-
-    const picker = createNode('div', 'size-picker');
-    this.panelList.appendChild(picker);
-
-    FONT_SIZES.forEach((size) => {
-      const button = createButton('size-btn', size.id.toUpperCase());
-      button.classList.toggle('is-chosen', size.px === this.fontPx);
-
-      this.addRow(
-        button,
-        () => {
-          this.fontPx = size.px;
-          this.onFontChange(size.px);
-          this.refreshPanel(`Tamaño de texto: ${size.label.toLowerCase()} (${size.px}px).`);
-        },
-        () => { this.panelDetail.textContent = `${size.label} · ${size.px}px`; },
-        picker
-      );
-    });
-
-    this.panelList.appendChild(this.sectionLabel('ATENCIÓN'));
-
-    const reset = this.makeRow('RESTABLECER', { value: 'ROJO · NORMAL' });
-    this.addRow(
-      reset,
-      () => {
-        this.accent = DEFAULT_THEME;
-        this.fontPx = DEFAULT_FONT_PX;
-        this.onAccentChange(DEFAULT_THEME);
-        this.onFontChange(DEFAULT_FONT_PX);
-        this.refreshPanel('Ajustes restablecidos.');
-      },
-      () => { this.panelDetail.textContent = 'Vuelve al tema rojo y al texto normal.'; }
-    );
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Estadísticas inferiores                                             */
-  /* ------------------------------------------------------------------ */
 
   /** Chips ATK/DEF/HP/SP que acompañan siempre al menú. */
   updateStats() {

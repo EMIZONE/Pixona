@@ -204,7 +204,8 @@ export class BattleEngine {
    * devolver el control.
    */
   async dealDamage(attacker, target, atk, verb) {
-    const victimSide = attacker === 'player' ? 'enemy' : 'player';
+    const playerAttacking = attacker === 'player';
+    const victimSide = playerAttacking ? 'enemy' : 'player';
     this.animators[attacker].playOnce('attack', ATTACK_WINDUP + ATTACK_RECOVERY);
 
     await wait(ATTACK_WINDUP);
@@ -216,11 +217,11 @@ export class BattleEngine {
 
     this.ui.showHit(victimSide, result);
 
-    const attackerName = attacker === 'player' ? this.player.name : this.enemy.name;
+    const attackerName = playerAttacking ? this.player.name : this.enemy.name;
     this.ui.logAction(`${attackerName} ${verb}. ${this.formatResult(result, target.name)}`);
 
     // Algunas armas cobran el golpe con HP del atacante, acierte o falle.
-    const recoil = attacker === 'player' ? this.player.weapon.recoil : 0;
+    const recoil = playerAttacking ? this.player.weapon.recoil : 0;
     if (recoil > 0) {
       this.player.takeRecoil(recoil);
       this.ui.showRecoil(recoil);

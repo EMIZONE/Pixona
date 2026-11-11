@@ -6,6 +6,10 @@
   <meta name="description" content="PIXONA: motor de combate por turnos con estética Persona. HTML, CSS y JavaScript puro.">
   <meta name="color-scheme" content="dark">
   <title>PIXONA Engine - Battle System</title>
+  <!-- Tipografía externa (Google Fonts). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -86,13 +90,15 @@
 
     <nav id="menu-options" class="menu-options" aria-label="Opciones del menú"></nav>
 
-    <section class="menu-submenu" aria-label="Detalle de la opción">
-      <header class="submenu-head">
-        <h2 id="menu-submenu-title" class="submenu-title">ARMA</h2>
-        <p id="menu-detail" class="submenu-detail">Elige un arma. Solo cambian las estadísticas.</p>
-      </header>
-      <div id="menu-submenu-list" class="submenu-list"></div>
-    </section>
+    <div id="menu-panel-slot">
+      <section class="menu-submenu" aria-label="Detalle de la opción">
+        <header class="submenu-head">
+          <h2 id="menu-submenu-title" class="submenu-title">ARMA</h2>
+          <p id="menu-detail" class="submenu-detail">Elige un arma. Solo cambian las estadísticas.</p>
+        </header>
+        <div id="menu-submenu-list" class="submenu-list"></div>
+      </section>
+    </div>
 
     <div id="menu-stats" class="menu-stats"></div>
 

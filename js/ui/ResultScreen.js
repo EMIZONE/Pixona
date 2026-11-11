@@ -67,16 +67,14 @@ export class ResultScreen {
     this.restartBtn.focus();
   }
 
-  /** Vuelca una lista y su estado vacío en un contenedor. */
+  /** Vuelca los nodos de una lista, o su estado vacío, en un contenedor. */
   renderList(container, entries, emptyText, buildRow) {
     container.replaceChildren();
-
     if (entries.length === 0) {
       container.appendChild(createNode('p', 'result-empty', emptyText));
       return;
     }
-
-    entries.forEach(buildRow);
+    container.append(...entries.map(buildRow));
   }
 
   /** Una fila por sombra derrotada: nombre, EXP y dinero. */
@@ -89,7 +87,7 @@ export class ResultScreen {
         createNode('span', 'result-row-name', `${index + 1}. ${enemy.name}`),
         createNode('span', 'result-row-reward', `+${enemy.xp} EXP · ¥ ${formatMoney(enemy.money)}`)
       );
-      this.rows.appendChild(row);
+      return row;
     });
   }
 
@@ -101,7 +99,7 @@ export class ResultScreen {
         createNode('span', 'result-loot-name', this.itemCatalog[itemId].name),
         createNode('span', 'result-loot-count', `×${count}`)
       );
-      this.lootEl.appendChild(row);
+      return row;
     });
   }
 }

@@ -71,7 +71,10 @@ js/logic/BattleFlow.js        five-encounter run, healing, reward totals, result
 js/ui/UIController.js         bars, battle log, item label, turn/hit feedback
 js/ui/BattleMenu.js           in-battle action buttons + keyboard
 js/ui/TurnBanner.js           turn band + persistent turn chip
-js/ui/MainMenu.js             full-screen menu: options, panels, keyboard/hover
+js/ui/MainMenu.js             full-screen menu shell: option list, focus zones,
+                              keyboard/hover, row + panel helpers
+js/ui/panels/                 one module per menu panel, `{ label, tall?, render(menu) }`:
+                              items, persona, stats, requests, calendar, system, empty
 js/ui/EncounterTransition.js  black fade + sliding next-shadow card
 js/ui/ResultScreen.js         final EXP/money/loot screen + restart
 js/graphics/SpriteAnimator.js frame animation (loop / hold-last-frame / playOnce) +
@@ -81,6 +84,7 @@ js/graphics/BackgroundRenderer.js  image-backed battle backdrop (assets/backgrou
 js/graphics/GroundShadow.js   ovalo de sombra por entidad (se mece y se desvanece)
 js/utils/DataLoader.js        fetch JSON + load images
 js/utils/dom.js               createNode/createButton helpers shared by the UI
+js/utils/keys.js              navigation key map shared by both menus
 serve.ps1 / start.bat         dev server / launcher
 docs/*.png                    README screenshots
 ```
@@ -206,23 +210,26 @@ Rows are registered through `addRow(row, action, preview, container)`, which sto
 `rowIndex`; `Enter` fires the active action; clicking a row focuses it first.
 
 The left list is `OBJETO / PERSONA / STATS / CONFIDENT / REQUEST / CALENDARIO / SISTEMA`
-(the old top-level ARMA entry was removed; equipment lives inside PERSONA).
-`renderPanel(keepIndex)` clears the panel and calls `OPTIONS[i].render`
-(`renderItems / renderPersona / renderStats / renderRequests / renderCalendar /
-renderSystem`, or `renderEmpty` for the decorative CONFIDENT option).
+(the old top-level ARMA entry was removed; equipment lives inside PERSONA) and is the
+`OPTIONS` array at the top of `MainMenu.js`. Each entry comes from a module in
+`js/ui/panels/` shaped `{ label, tall?, render(menu) }`; `renderPanel(keepIndex)` clears
+the panel, toggles `is-persona` when `tall`, and calls `option.render(this)`.
 `refreshPanel(message)` re-renders, updates the chips and writes the result message after
 an equip, theme, font-size or item change. Panels with no rows leave focus in `'options'`,
-so Enter never traps the keyboard in an empty panel.
+so Enter never traps the keyboard in an empty panel. A new panel needs one file in
+`panels/` plus one entry in `OPTIONS`; the shell only provides rows, containers and
+repainting.
 
-PERSONA has a second level. The three slot rows call `openGearCategory(category)`, which
-sets `gearCategory` (`'weapon' | 'armor' | 'accessory'`) and renders a back row plus
-**every** piece in that category. `gearConfig(category)` supplies the list, current
-piece, describe/stats/equip functions; `weaponStats`, `armorStats` and `accessoryStats`
-render aligned values (`ATK 49 · DEF 0 · RETRO -14`, `DEF 6 · VEL -2 · EVA -2%`, etc.).
-Enter equips and keeps the list open for comparison; Esc/← or the back row calls
-`closeGearCategory()` and returns focus to the matching slot. `backToOptions()` closes
-the category first, then the options zone on the next Esc. `selectOption()` clears the
-category when the user jumps to another main option.
+PERSONA has a second level, all inside `js/ui/panels/persona.js`. The three slot rows set
+`menu.gearCategory` (`'weapon' | 'armor' | 'accessory'`) and the panel then draws a back
+row plus **every** piece in that category. `gearConfig(category)` supplies the list,
+current piece, describe/stats/equip functions; `weaponStats`, `armorStats` and
+`accessoryBonus` render aligned values (`ATK 49 · DEF 0 · RETRO -14`,
+`DEF 6 · VEL -2 · EVA -2%`, etc.). Enter equips and keeps the list open for comparison;
+Esc/← or the back row calls `closeGearCategory()` and returns focus to the matching slot.
+`backToOptions()` asks `personaPanel.back(this)` first, then closes the options zone on
+the next Esc. `selectOption()` clears the category when the user jumps to another main
+option.
 
 Panels are functional:
 - **OBJETO** → `engine.setActiveItem()` → `onSelectItem`; the battle button label updates.
@@ -231,7 +238,8 @@ Panels are functional:
 - **STATS** → reads `player.persona` from `characters.json`; display-only.
 - **REQUEST** → pending and completed requests from `data/requests.json`; display-only.
 - **CALENDARIO** → current real month, Monday-first; past days red, today white.
-- **SISTEMA** → accent color + root font size (see below).
+- **SISTEMA** → accent color + root font size (see below); both live in `menu.settings`,
+  seeded by `defaultSettings()` and applied through the callbacks.
 
 ### Turn & hit feedback
 `TurnBanner` (created by `UIController`) owns the full-width band and the persistent
@@ -270,7 +278,8 @@ the whole menu stacks at 760px.
 
 - **No dependencies, no build step.** Do not add npm packages or a bundler.
 - One class per file (small helper modules like `js/utils/dom.js` may export plain
-  functions), **named exports**, no default exports.
+  functions), **named exports**, no default exports. Menu panels are one plain module
+  each under `js/ui/panels/`.
 - **Text in Spanish**, identifiers in English.
 - Build DOM with `createNode` / `createButton` from `js/utils/dom.js` and set text with
   `textContent`. Never `innerHTML` with data values.
@@ -386,3 +395,5 @@ reason; only `transform` animates.
 | 2026-11-10 | Turn announcements (`TurnBanner` + persistent chip), floating damage/`ESQUIVA`/`BLOQUEO`, hit flash, scene shake and attack lunge; README screenshots `docs/turn.png` and `docs/hit.png` |
 | 2026-11-10 | Attack pacing: slower attack animations (8/9 fps), 250 ms wind-up, 350 ms recovery and 250 ms turn pause; `RESOLVING` state locks the menu; the character on turn scales 7 % with 200 ms smoothing; README screenshots `docs/turn.png`, `docs/enemy-turn.png` and `docs/hit.png` |
 | 2026-11-10 | Gear redesign: top-level ARMA removed; PERSONA slots open full category lists with aligned stats; more weapons/armor/accessories; armor can modify EVA/SPD; `Mandoble sangriento` recoil weapon; `docs/menu.png` and `docs/persona.png` refreshed |
+| 2026-11-10 | Size pass: shared navigation key map (`utils/keys.js`), one `Fighter.equip(slot, piece)` instead of three setters, merged gear stat/description helpers, single theme applier + `entityLayout` in `main.js`, `UIController`/`ResultScreen` list helpers simplified; anime.js CDN dropped (CSS keyframes only); docs screenshots recompressed (~62 % lighter) |
+| 2026-11-10 | Main menu split: `MainMenu.js` keeps the shell (options, focus zones, keyboard, rows, panel swap) and one module per panel lives in `js/ui/panels/` as `{ label, tall?, render(menu) }`; SISTEMA settings moved to `menu.settings` |

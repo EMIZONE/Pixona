@@ -15,6 +15,8 @@ const NO_ARMOR = {
   evasionBonus: 0
 };
 const NO_ACCESSORY = { id: null, name: '', description: '', evasionBonus: 0, speedBonus: 0 };
+/** Cada golpe varía entre -4 y +4 puntos de daño. */
+const DAMAGE_VARIANCE = 4;
 
 export class Fighter {
   /**
@@ -41,9 +43,10 @@ export class Fighter {
 
     // El equipo se resuelve por id contra los catálogos. Las sombras no traen
     // ids de equipo, así que reciben las piezas neutras.
-    this.weapon = weapons.find((weapon) => weapon.id === data.weapon) ?? NO_WEAPON;
-    this.armor = equipment.armor.find((armor) => armor.id === data.armor) ?? NO_ARMOR;
-    this.accessory = equipment.accessories.find((piece) => piece.id === data.accessory) ?? NO_ACCESSORY;
+    const pick = (list, id) => list.find((piece) => piece.id === id);
+    this.weapon = pick(weapons, data.weapon) ?? NO_WEAPON;
+    this.armor = pick(equipment.armor, data.armor) ?? NO_ARMOR;
+    this.accessory = pick(equipment.accessories, data.accessory) ?? NO_ACCESSORY;
 
     // Estados temporales de un turno.
     this.isBlocking = false;
@@ -64,19 +67,13 @@ export class Fighter {
 
   // --- Equipo ---------------------------------------------------------
 
-  /** Cambiar de arma solo afecta a las estadísticas, nunca al sprite. */
-  equipWeapon(weapon) {
-    this.weapon = weapon;
-    this.recalculateStats();
-  }
-
-  equipArmor(armor) {
-    this.armor = armor;
-    this.recalculateStats();
-  }
-
-  equipAccessory(accessory) {
-    this.accessory = accessory;
+  /**
+   * Cambia una pieza equipada y recalcula las estadísticas. Cambiar de arma
+   * solo afecta a los números, nunca al sprite.
+   * @param {'weapon' | 'armor' | 'accessory'} slot
+   */
+  equip(slot, piece) {
+    this[slot] = piece;
     this.recalculateStats();
   }
 
@@ -133,7 +130,9 @@ export class Fighter {
     }
 
     const blocked = this.isBlocking;
-    let damage = Math.max(1, incomingAtk - this.def);
+    // Variación por golpe: -4 a +4 puntos antes del bloqueo.
+    const variance = Math.floor(Math.random() * (DAMAGE_VARIANCE * 2 + 1)) - DAMAGE_VARIANCE;
+    let damage = Math.max(1, incomingAtk - this.def + variance);
     if (blocked) {
       damage = Math.max(1, Math.floor(damage * (1 - this.blockReduce)));
     }

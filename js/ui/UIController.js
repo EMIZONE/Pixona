@@ -5,7 +5,7 @@ import { TurnBanner } from './TurnBanner.js';
 /** El registro se mantiene corto para no tapar la escena. */
 const MAX_LOG_ENTRIES = 6;
 /** Un número de daño vive algo menos que su animación. */
-const DAMAGE_FLOAT_MS = 950;
+const DAMAGE_FLOAT_MS = 1650;
 
 /**
  * Puente entre la lógica del combate y el DOM del HUD: barras de HP/SP,
@@ -13,8 +13,9 @@ const DAMAGE_FLOAT_MS = 950;
  * de turnos y golpes.
  */
 export class UIController {
-  constructor(onActionSelect) {
+  constructor(onActionSelect, getHitPoint) {
     this.menu = new BattleMenu('battle-menu', onActionSelect);
+    this.getHitPoint = getHitPoint;
     this.turnBanner = new TurnBanner();
     this.hitFlash = document.getElementById('hit-flash');
     this.canvas = document.getElementById('game-canvas');
@@ -53,7 +54,7 @@ export class UIController {
 
   /** Etiqueta del botón OBJETO con el objeto activo y sus cargas. */
   setItemLabel(itemName, count) {
-    this.menu.setActionLabel('ITEM', itemName ? `OBJETO (${itemName} ×${count})` : 'OBJETO');
+    this.menu.setActionLabel('ITEM', `OBJETO (${itemName} ×${count})`);
   }
 
   /** Anuncia el turno ('player' | 'enemy' | 'over') en banda y chip. */
@@ -76,25 +77,21 @@ export class UIController {
     this.shakeScene();
   }
 
-  /** Crea el número que sube desde la ficha del jugador o del enemigo. */
+  /** Crea el número que sube desde el cuerpo del jugador o del enemigo. */
   spawnDamage(side, text, modifier) {
-    // Se mide en el frame siguiente: la ficha del enemigo la coloca el bucle
-    // de render y puede no tener aún su posición definitiva en este instante.
-    requestAnimationFrame(() => {
-      const bar = side === 'player' ? this.playerHpBar : this.enemyHpBar;
-      const rect = bar.closest('.status-panel').getBoundingClientRect();
+    const point = this.getHitPoint(side);
 
-      const float = createNode(
-        'span',
-        `damage-float is-${side}${modifier ? ` ${modifier}` : ''}`,
-        text
-      );
-      float.setAttribute('aria-hidden', 'true');
-      float.style.left = `${rect.left + rect.width / 2}px`;
-      float.style.top = `${rect.top}px`;
-      document.body.appendChild(float);
-      setTimeout(() => float.remove(), DAMAGE_FLOAT_MS);
-    });
+    const float = createNode(
+      'span',
+      `damage-float is-${side}${modifier ? ` ${modifier}` : ''}`,
+      text
+    );
+    float.setAttribute('aria-hidden', 'true');
+    float.style.left = `${point.x}px`;
+    float.style.top = `${point.y}px`;
+    document.body.appendChild(float);
+
+    setTimeout(() => float.remove(), DAMAGE_FLOAT_MS);
   }
 
   /** Retroceso del arma: número propio sobre el jugador y destello rojo. */
@@ -135,10 +132,9 @@ export class UIController {
    * (victoria, derrota, curación entre combates).
    */
   logAction(message, kind) {
-    const entry = document.createElement('p');
-    entry.className = kind ? `log-entry ${kind}` : 'log-entry';
-    entry.textContent = message;
-    this.logContainer.appendChild(entry);
+    this.logContainer.appendChild(
+      createNode('p', kind ? `log-entry ${kind}` : 'log-entry', message)
+    );
 
     while (this.logContainer.children.length > MAX_LOG_ENTRIES) {
       this.logContainer.firstElementChild.remove();
