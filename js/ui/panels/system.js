@@ -20,10 +20,37 @@ const FONT_SIZES = [
 
 const DEFAULT_THEME = THEMES[0].color;
 const DEFAULT_FONT_PX = 16;
+const STORAGE_KEY = 'pixona.settings';
 
-/** Ajustes en memoria: al recargar vuelven a los valores por defecto. */
+/** Ajustes por defecto (rojo + texto normal). */
 export function defaultSettings() {
   return { accent: DEFAULT_THEME, fontPx: DEFAULT_FONT_PX };
+}
+
+/** Ajustes guardados en el navegador, saneados contra las opciones válidas. */
+export function loadSettings() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return {
+      accent: THEMES.some((theme) => theme.color === stored?.accent)
+        ? stored.accent
+        : DEFAULT_THEME,
+      fontPx: FONT_SIZES.some((size) => size.px === stored?.fontPx)
+        ? stored.fontPx
+        : DEFAULT_FONT_PX
+    };
+  } catch {
+    return defaultSettings();
+  }
+}
+
+/** Guarda los ajustes; si el navegador bloquea el almacenamiento, duran la sesión. */
+export function saveSettings(settings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // Modo privado o almacenamiento lleno: no hay nada que hacer.
+  }
 }
 
 /**
@@ -53,6 +80,7 @@ export const systemPanel = {
         () => {
           settings.accent = theme.color;
           menu.onAccentChange(theme.color);
+          saveSettings(settings);
           menu.refreshPanel(`Color de interfaz: ${theme.label.toLowerCase()}.`);
         },
         () => { menu.panelDetail.textContent = `Color de interfaz: ${theme.label.toLowerCase()}.`; }
@@ -73,6 +101,7 @@ export const systemPanel = {
         () => {
           settings.fontPx = size.px;
           menu.onFontChange(size.px);
+          saveSettings(settings);
           menu.refreshPanel(`Tamaño de texto: ${size.label.toLowerCase()} (${size.px}px).`);
         },
         () => { menu.panelDetail.textContent = `${size.label} · ${size.px}px`; },
@@ -89,6 +118,7 @@ export const systemPanel = {
         Object.assign(settings, defaultSettings());
         menu.onAccentChange(settings.accent);
         menu.onFontChange(settings.fontPx);
+        saveSettings(settings);
         menu.refreshPanel('Ajustes restablecidos.');
       },
       () => { menu.panelDetail.textContent = 'Vuelve al tema rojo y al texto normal.'; }

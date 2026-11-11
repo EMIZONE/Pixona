@@ -14,7 +14,12 @@
     "items": {},
     "xp": 140,
     "money": 4000,
-    "drop": { "item": "potion", "count": 1 }
+    "drop": {
+      "item": "potion",
+      "count": 1
+    },
+    "skillChance": 0,
+    "skillPower": 1.15
   },
   {
     "id": "shadow_colmillo",
@@ -31,7 +36,12 @@
     "items": {},
     "xp": 200,
     "money": 6000,
-    "drop": { "item": "ether", "count": 1 }
+    "drop": {
+      "item": "ether",
+      "count": 1
+    },
+    "skillChance": 0.05,
+    "skillPower": 1.15
   },
   {
     "id": "shadow_espectral",
@@ -48,7 +58,12 @@
     "items": {},
     "xp": 280,
     "money": 8000,
-    "drop": { "item": "potion_big", "count": 1 }
+    "drop": {
+      "item": "potion_big",
+      "count": 1
+    },
+    "skillChance": 0.1,
+    "skillPower": 1.15
   },
   {
     "id": "shadow_guardiana",
@@ -65,7 +80,12 @@
     "items": {},
     "xp": 380,
     "money": 12000,
-    "drop": { "item": "ether", "count": 1 }
+    "drop": {
+      "item": "ether",
+      "count": 1
+    },
+    "skillChance": 0.15,
+    "skillPower": 1.15
   },
   {
     "id": "shadow_trono",
@@ -82,6 +102,11 @@
     "items": {},
     "xp": 550,
     "money": 20000,
-    "drop": { "item": "potion_big", "count": 1 }
+    "drop": {
+      "item": "potion_big",
+      "count": 1
+    },
+    "skillChance": 0.2,
+    "skillPower": 1.15
   }
 ]

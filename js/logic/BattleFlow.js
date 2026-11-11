@@ -1,21 +1,26 @@
 import { BattleEngine } from './BattleEngine.js';
 import { Fighter } from './Fighter.js';
+import { Requests } from './Requests.js';
+import { formatMoney } from '../utils/format.js';
 
 /**
  * Orquestador de la tanda de cinco combates.
  *
- * Crea el motor, cambia de sombra, restaura HP/SP, acumula EXP/dinero/botín y
- * decide entre la siguiente transición y la pantalla de resultados. No dibuja
- * nada: eso vive en `EncounterTransition` y `ResultScreen`.
+ * Crea el motor, cambia de sombra, restaura HP/SP, acumula EXP/dinero/botín,
+ * cierra las peticiones cuyo objetivo cae y decide entre la siguiente
+ * transición y la pantalla de resultados. No dibuja nada: eso vive en
+ * `EncounterTransition` y `ResultScreen`.
  */
 export class BattleFlow {
-  constructor({ player, enemies, ui, animators, transition, result, catalogs }) {
+  constructor({ player, enemies, ui, animators, transition, result, catalogs, requests, progression }) {
     this.player = player;
     this.enemies = enemies;
     this.ui = ui;
     this.transition = transition;
     this.result = result;
     this.catalogs = catalogs;
+    this.requests = new Requests(requests);
+    this.progression = progression;
 
     this.index = 0;
     this.encounter = enemies[0];
@@ -23,7 +28,7 @@ export class BattleFlow {
     this.defeated = [];
 
     this.engine = new BattleEngine(player, ui, animators, {
-      onVictory: () => this.handleVictory(),
+      onVictory: () => this.handleVictory().catch((error) => this.fail(error)),
       onDefeat: () => this.handleDefeat()
     });
   }
@@ -34,7 +39,7 @@ export class BattleFlow {
   }
 
   createEnemy(data) {
-    return new Fighter(data, this.catalogs);
+    return new Fighter(data, this.catalogs, this.player.rng);
   }
 
   /** Arranca la tanda desde la primera sombra. */
@@ -56,13 +61,14 @@ export class BattleFlow {
         victory: true,
         defeated: this.defeated,
         total: this.enemies.length,
-        rewards: this.rewards
+        rewards: this.rewards,
+        level: this.progression.levelFor(this.player.xp)
       });
       return;
     }
 
     const nextIndex = this.index + 1;
-    await this.transition.play({
+    const played = await this.transition.play({
       index: nextIndex + 1,
       total: this.enemies.length,
       enemy: this.enemies[nextIndex],
@@ -70,7 +76,15 @@ export class BattleFlow {
       onCovered: () => this.advance(nextIndex)
     });
 
-    this.engine.start();
+    // Si la transición ya estaba ocupada, no se arranca un turno sobre la
+    // sombra anterior.
+    if (played) this.engine.start();
+  }
+
+  /** La tanda no puede quedarse a medias sin dejar rastro. */
+  fail(error) {
+    console.error(error);
+    this.ui.logAction('La tanda se detuvo por un error. Recarga la página.');
   }
 
   /** Prepara el siguiente combate mientras la pantalla está en negro. */
@@ -88,12 +102,29 @@ export class BattleFlow {
   }
 
   /**
-   * Suma EXP/dinero y añade el botín al inventario. Si el objeto activo acaba
-   * de recibir cargas, refresca la etiqueta del botón OBJETO.
+   * Suma EXP/dinero y añade el botín al inventario. La EXP puede subir de
+   * nivel; el dinero también paga las peticiones que se cierran con esta
+   * sombra. Si el objeto activo acaba de recibir cargas, refresca la etiqueta
+   * del botón OBJETO.
    */
   collect(enemy) {
     this.rewards.xp += enemy.xp;
     this.rewards.money += enemy.money;
+    this.player.money += enemy.money;
+
+    const previousLevel = this.progression.levelFor(this.player.xp);
+    this.player.xp += enemy.xp;
+    const level = this.progression.levelFor(this.player.xp);
+    if (level > previousLevel) this.ui.logAction(`NIVEL ${level}.`, 'accent');
+
+    this.requests.completeFor(enemy.id).forEach((request) => {
+      this.player.money += request.reward;
+      this.rewards.money += request.reward;
+      this.ui.logAction(
+        `Petición completada: ${request.title}. +¥ ${formatMoney(request.reward)}.`,
+        'accent'
+      );
+    });
 
     if (!enemy.drop) return;
 
@@ -110,6 +141,7 @@ export class BattleFlow {
       defeated: this.defeated,
       total: this.enemies.length,
       rewards: this.rewards,
+      level: this.progression.levelFor(this.player.xp),
       fallenAt: this.encounter
     });
   }

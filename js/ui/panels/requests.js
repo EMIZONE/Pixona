@@ -1,6 +1,8 @@
+import { formatMoney } from '../../utils/format.js';
+
 /**
- * Panel REQUEST: peticiones agrupadas por estado. El contenido es estático,
- * así que las filas solo muestran el detalle en el texto del panel.
+ * Panel REQUEST: peticiones agrupadas por estado. Las pendientes se cierran
+ * solas al derrotar la sombra indicada en `target` (ver `logic/Requests.js`).
  */
 export const requestsPanel = {
   label: 'REQUEST',
@@ -30,7 +32,7 @@ export const requestsPanel = {
 function addRequestRow(menu, request) {
   const completed = request.status === 'completed';
   const row = menu.makeRow(request.title, {
-    value: completed ? 'COMPLETADA' : request.reward,
+    value: completed ? 'COMPLETADA' : `¥ ${formatMoney(request.reward)}`,
     completed
   });
   menu.addRow(row, () => {
@@ -42,5 +44,5 @@ function addRequestRow(menu, request) {
 function describeRequest(request) {
   const status = request.status === 'completed' ? 'COMPLETADA' : 'PENDIENTE';
   return `${request.client} · ${request.location}. ${request.summary} ` +
-    `${request.objective} Recompensa: ${request.reward}. [${status}]`;
+    `${request.objective} Recompensa: ¥ ${formatMoney(request.reward)}. [${status}]`;
 }

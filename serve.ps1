@@ -15,6 +15,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Con separador final: evita que un hermano tipo "Pixona-old" pase el prefijo.
+$RootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd('\') + '\'
 
 $MimeTypes = @{
     '.html'  = 'text/html; charset=utf-8'
@@ -105,7 +107,8 @@ try {
                 [System.IO.Path]::Combine($Root, $relative.Replace('/', $separator))
             )
 
-            if (-not $candidate.StartsWith($Root, [System.StringComparison]::OrdinalIgnoreCase)) {
+            if (-not $candidate.StartsWith($RootFull, [System.StringComparison]::OrdinalIgnoreCase) -or
+                $relative -match '^\.git') {
                 throw 'ruta fuera de la raiz del proyecto'
             }
             if ([System.IO.Directory]::Exists($candidate)) {

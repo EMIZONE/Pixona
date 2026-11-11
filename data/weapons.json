@@ -52,7 +52,7 @@
     "name": "Mandoble sangriento",
     "atkBonus": 24,
     "defBonus": -10,
-    "recoil": 14,
+    "recoil": 6,
     "description": "Cada tajo que das te cuesta sangre. Mucho daño, precio alto."
   }
 ]

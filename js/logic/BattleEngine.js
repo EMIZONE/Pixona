@@ -63,10 +63,15 @@ export class BattleEngine {
     this.ensureActiveItem();
   }
 
-  /** Da el turno al jugador tras el mensaje de encuentro. */
+  /** Da el primer turno: lo gana quien tenga más VEL. */
   start() {
-    this.ui.logAction(`${this.enemy.name} te cierra el paso. Elige una acción.`);
-    this.setState(BATTLE_STATE.PLAYER_TURN);
+    const playerFirst = this.player.speed >= this.enemy.speed;
+    this.ui.logAction(
+      playerFirst
+        ? `${this.enemy.name} te cierra el paso. Elige una acción.`
+        : `${this.enemy.name} es más rápido y ataca primero.`
+    );
+    this.setState(playerFirst ? BATTLE_STATE.PLAYER_TURN : BATTLE_STATE.ENEMY_TURN);
   }
 
   /** Si el objeto activo se agotó, pasa al siguiente que quede. */
@@ -100,7 +105,7 @@ export class BattleEngine {
       case BATTLE_STATE.ENEMY_TURN:
         this.ui.showTurn('enemy');
         this.ui.enableMenu(false);
-        this.processEnemyTurn();
+        this.processEnemyTurn().catch((error) => this.recover(error));
         break;
 
       case BATTLE_STATE.VICTORY:
@@ -124,10 +129,24 @@ export class BattleEngine {
     this.animators.player.setAnimation('idle');
     // La sombra derrotada se queda en el último frame; en derrota vuelve a idle.
     this.animators.enemy.setAnimation(victory ? 'defeat' : 'idle', !victory);
-    this.outcomeTimer = setTimeout(
-      () => (victory ? this.onVictory() : this.onDefeat()),
-      victory ? VICTORY_DELAY : DEFEAT_DELAY
-    );
+    this.outcomeTimer = setTimeout(() => {
+      const outcome = victory ? this.onVictory() : this.onDefeat();
+      Promise.resolve(outcome).catch((error) => this.fail(error, 'No se pudo cerrar el combate.'));
+    }, victory ? VICTORY_DELAY : DEFEAT_DELAY);
+  }
+
+  /** Un error se registra y se avisa: nunca deja la escena muda. */
+  fail(error, message) {
+    console.error(error);
+    this.ui.logAction(message);
+  }
+
+  /** Devuelve el turno si una acción asíncrona falla a mitad. */
+  recover(error) {
+    this.fail(error, 'Algo falló. Se devuelve el turno.');
+    if (this.state === BATTLE_STATE.RESOLVING || this.state === BATTLE_STATE.ENEMY_TURN) {
+      this.setState(BATTLE_STATE.PLAYER_TURN);
+    }
   }
 
   /**
@@ -144,20 +163,24 @@ export class BattleEngine {
     this.player.resetTurnStates();
     this.setState(BATTLE_STATE.RESOLVING);
 
-    const accepted = await this.resolvePlayerAction(actionType);
-    if (!accepted) {
-      this.state = BATTLE_STATE.PLAYER_TURN;
-      this.ui.enableMenu(true);
-      return;
+    try {
+      const accepted = await this.resolvePlayerAction(actionType);
+      if (!accepted) {
+        this.state = BATTLE_STATE.PLAYER_TURN;
+        this.ui.enableMenu(true);
+        return;
+      }
+
+      this.ui.updateStatusBars(this.player, this.enemy);
+      if (this.checkEndConditions()) return;
+
+      // Deja respirar el último frame antes de anunciar el turno del enemigo.
+      await wait(TURN_PAUSE);
+      if (this.state !== BATTLE_STATE.RESOLVING) return;
+      this.setState(BATTLE_STATE.ENEMY_TURN);
+    } catch (error) {
+      this.recover(error);
     }
-
-    this.ui.updateStatusBars(this.player, this.enemy);
-    if (this.checkEndConditions()) return;
-
-    // Deja respirar el último frame antes de anunciar el turno del enemigo.
-    await wait(TURN_PAUSE);
-    if (this.state !== BATTLE_STATE.RESOLVING) return;
-    this.setState(BATTLE_STATE.ENEMY_TURN);
   }
 
   /** Traduce el `data-action` del menú a una regla de combate. */
@@ -256,15 +279,18 @@ export class BattleEngine {
 
   /**
    * Turno de la sombra: espera para que se lea el registro, ataca (70 %) o
-   * bloquea (30 %) y solo entonces devuelve el turno al jugador.
+   * bloquea (30 %) y solo entonces devuelve el turno al jugador. Algunas
+   * sombras cambian ese ataque por una habilidad más fuerte (`skillChance`).
    */
   async processEnemyTurn() {
     this.enemy.resetTurnStates();
     await wait(ENEMY_THINK_TIME);
     if (this.state !== BATTLE_STATE.ENEMY_TURN) return;
 
-    if (Math.random() < ENEMY_ATTACK_CHANCE) {
-      await this.dealDamage('enemy', this.player, this.enemy.atk, 'ataca');
+    const usesSkill = this.enemy.rng() < this.enemy.skillChance;
+    if (this.enemy.rng() < ENEMY_ATTACK_CHANCE) {
+      const atk = usesSkill ? this.enemy.atk * this.enemy.skillPower : this.enemy.atk;
+      await this.dealDamage('enemy', this.player, atk, usesSkill ? 'usa una habilidad' : 'ataca');
     } else {
       this.enemy.isBlocking = true;
       this.ui.logAction(`${this.enemy.name} se bloquea.`);

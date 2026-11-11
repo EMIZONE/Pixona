@@ -73,6 +73,9 @@ export class BattleMenu {
   setEnabled(enabled) {
     this.enabled = enabled;
     this.container.classList.toggle('is-disabled', !enabled);
+    this.buttons.forEach((button) => {
+      button.disabled = !enabled;
+    });
     if (enabled) this.setFocus(this.selectedIndex);
   }
 }

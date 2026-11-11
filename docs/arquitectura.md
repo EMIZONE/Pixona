@@ -304,25 +304,30 @@ Reparto de responsabilidades:
 PIXONA
 ├── index.html
 ├── css/main.css
-├── data/ (characters, enemies, weapons, equipment, items, requests, animations)
+├── data/ (characters, enemies, weapons, equipment, items, requests, progression,
+│          animations)
 ├── assets/ (hero_spritesheet, enemy_spritesheet, background)
 ├── js/
 │   ├── main.js            boot + render loop + wiring de menús
 │   ├── logic/
 │   │   ├── Fighter.js     stats, equipo, daño, evasión, bloqueo, ítems
 │   │   ├── BattleEngine.js turnos INIT > PLAYER_TURN > RESOLVING > ENEMY_TURN
-│   │   └── BattleFlow.js  5 sombras, curación, totales, resultados
+│   │   ├── BattleFlow.js  5 sombras, curación, totales, peticiones, resultados
+│   │   ├── Progression.js curva de niveles (EXP)
+│   │   └── Requests.js    cierra la petición cuya sombra cae
 │   ├── ui/
 │   │   ├── UIController.js, BattleMenu.js, TurnBanner.js
-│   │   ├── MainMenu.js    opciones + paneles + swap de tarjeta
+│   │   ├── MainMenu.js    shell: opciones, foco, teclado y swap de tarjeta
+│   │   ├── panels/        un módulo por panel (items, persona, stats, ...)
 │   │   ├── EncounterTransition.js, ResultScreen.js
 │   ├── graphics/ (SpriteAnimator, BackgroundRenderer, GroundShadow)
-│   └── utils/ (DataLoader, dom)
+│   └── utils/ (DataLoader, dom, keys, format)
+├── tests/ (combat.test.js)
 └── serve.ps1 · start.bat · package.json
 
 FLUJO
 DOMContentLoaded
-  -> Promise.all(7 JSON + 3 imágenes)
+  -> Promise.all(8 JSON + 3 imágenes)
   -> catalogs
   -> Fighter(catalogs)
   -> BattleEngine + UIController + BattleFlow + MainMenu

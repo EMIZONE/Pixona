@@ -25,9 +25,13 @@ export class EncounterTransition {
     this.settleTimer = null;
   }
 
-  /** @param {{ index: number, total: number, enemy: object, onCovered: Function }} options */
+  /**
+   * Reproduce la transición. Devuelve `false` si ya había una en marcha, para
+   * que `BattleFlow` no arranque el turno sobre la sombra anterior.
+   * @param {{ index: number, total: number, enemy: object, onCovered: Function }} options
+   */
   async play({ index, total, enemy, onCovered }) {
-    if (this.busy) return;
+    if (this.busy) return false;
     this.busy = true;
     clearTimeout(this.settleTimer);
 
@@ -36,6 +40,7 @@ export class EncounterTransition {
     this.quoteEl.textContent = enemy.description;
     this.root.classList.remove('is-settled');
     this.root.setAttribute('aria-hidden', 'false');
+    this.root.inert = false;
     this.root.classList.add('is-open');
 
     // El negro ya cubre la escena: cambiar el enemigo sin que se vea el corte.
@@ -52,6 +57,8 @@ export class EncounterTransition {
     await wait(FADE_OUT_MS);
     this.root.classList.remove('is-closing');
     this.root.setAttribute('aria-hidden', 'true');
+    this.root.inert = true;
     this.busy = false;
+    return true;
   }
 }

@@ -6,8 +6,9 @@
     "location": "Callejón de Shibuya",
     "summary": "Un gato negro no ha vuelto a casa desde ayer.",
     "objective": "Encuéntralo antes de que anochezca.",
-    "reward": "¥ 8,000",
-    "status": "pending"
+    "reward": 8000,
+    "status": "pending",
+    "target": "shadow_errante"
   },
   {
     "id": "ruido_contenedores",
@@ -16,8 +17,9 @@
     "location": "Trastienda del konbini",
     "summary": "Algo golpea los contenedores cada noche.",
     "objective": "Investiga el callejón detrás de la tienda.",
-    "reward": "¥ 12,000",
-    "status": "pending"
+    "reward": 12000,
+    "status": "pending",
+    "target": "shadow_espectral"
   },
   {
     "id": "carta_sin_remitente",
@@ -26,8 +28,9 @@
     "location": "Estación de Shibuya",
     "summary": "Una carta lleva tres días esperando a su dueño.",
     "objective": "Encuentra a quién va dirigida.",
-    "reward": "¥ 5,000",
-    "status": "pending"
+    "reward": 5000,
+    "status": "pending",
+    "target": "shadow_trono"
   },
   {
     "id": "tickets_cine",
@@ -36,7 +39,7 @@
     "location": "Cine de Shibuya",
     "summary": "Necesitaba dos entradas para el estreno.",
     "objective": "Consigue las entradas antes de la función.",
-    "reward": "¥ 3,000",
+    "reward": 3000,
     "status": "completed"
   },
   {
@@ -46,7 +49,7 @@
     "location": "Estación de Shibuya",
     "summary": "Se le cayó el móvil en el andén.",
     "objective": "Recupéralo en objetos perdidos.",
-    "reward": "¥ 6,000",
+    "reward": 6000,
     "status": "completed"
   },
   {
@@ -56,7 +59,7 @@
     "location": "Callejón de Shibuya",
     "summary": "Una sombra asustaba a los clientes.",
     "objective": "Derrota a la sombra.",
-    "reward": "¥ 15,000",
+    "reward": 15000,
     "status": "completed"
   }
 ]

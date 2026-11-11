@@ -1,4 +1,5 @@
 import { createButton, createNode } from '../utils/dom.js';
+import { formatMoney } from '../utils/format.js';
 import { navigationAction } from '../utils/keys.js';
 import { calendarPanel } from './panels/calendar.js';
 import { emptyPanel } from './panels/empty.js';
@@ -6,7 +7,7 @@ import { itemsPanel } from './panels/items.js';
 import { personaPanel } from './panels/persona.js';
 import { requestsPanel } from './panels/requests.js';
 import { statsPanel } from './panels/stats.js';
-import { defaultSettings, systemPanel } from './panels/system.js';
+import { loadSettings, systemPanel } from './panels/system.js';
 
 /**
  * Menú principal de pantalla completa (estilo Persona).
@@ -71,8 +72,8 @@ export class MainMenu {
     this.onOpen = onOpen;
     this.onClose = onClose;
 
-    // Tema y tamaño elegidos en SISTEMA; se aplican al documento por callback.
-    this.settings = defaultSettings();
+    // Tema y tamaño guardados en el navegador (o los valores por defecto).
+    this.settings = loadSettings();
 
     // Markup de index.html.
     this.root = document.getElementById('main-menu');
@@ -82,6 +83,7 @@ export class MainMenu {
     this.panelDetail = document.getElementById('menu-detail');
     this.panelList = document.getElementById('menu-submenu-list');
     this.statsEl = document.getElementById('menu-stats');
+    this.moneyEl = this.root.querySelector('.menu-money');
 
     // Navegación: lista de opciones + filas del panel activo.
     this.optionEls = [];
@@ -94,6 +96,10 @@ export class MainMenu {
     this.gearCategory = null;
     // Se actualiza con cada movimiento real del ratón (ver `hoverOption`).
     this.pointerMovedAt = 0;
+
+    // Lo guardado en SISTEMA se aplica ya, sin esperar a abrir el menú.
+    this.onAccentChange(this.settings.accent);
+    this.onFontChange(this.settings.fontPx);
 
     this.build();
   }
@@ -180,6 +186,11 @@ export class MainMenu {
    * opciones cierra el menú.
    */
   handleKey(event) {
+    if (event.key === 'Tab') {
+      this.trapFocus(event);
+      return;
+    }
+
     const action = navigationAction(event.key);
 
     if (action === 'escape') {
@@ -223,6 +234,20 @@ export class MainMenu {
     this.rowIndex = (this.rowIndex + delta + this.rows.length) % this.rows.length;
     this.applyRowHighlight();
     this.previewRow();
+  }
+
+  /** El menú es modal: Tab recorre sus botones y no sale del overlay. */
+  trapFocus(event) {
+    event.preventDefault();
+    const items = this.focusables();
+    const current = items.indexOf(document.activeElement);
+    const step = event.shiftKey ? -1 : 1;
+    const next = (current + step + items.length) % items.length;
+    items[next].focus({ preventScroll: true });
+  }
+
+  focusables() {
+    return Array.from(this.root.querySelectorAll('button:not([disabled])'));
   }
 
   /* ------------------------------------------------------------------ */
@@ -305,12 +330,19 @@ export class MainMenu {
     this.optionEls.forEach((element, index) => {
       element.classList.toggle('is-active', index === this.optionIndex);
     });
+    // El foco real acompaña al resaltado para que el teclado no se pierda.
+    if (this.visible && this.zone === 'options') {
+      this.optionEls[this.optionIndex].focus({ preventScroll: true });
+    }
   }
 
   applyRowHighlight() {
     this.rows.forEach((row, index) => {
       row.el.classList.toggle('is-active', this.zone === 'rows' && index === this.rowIndex);
     });
+    if (this.visible && this.zone === 'rows' && this.rows.length > 0) {
+      this.rows[this.rowIndex].el.focus({ preventScroll: true });
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -429,12 +461,13 @@ export class MainMenu {
     return `${persona.name} · Nivel ${persona.level} · Arcano: ${persona.arcana}`;
   }
 
-  /** Chips ATK/DEF/HP/SP que acompañan siempre al menú. */
+  /** Chips ATK/DEF/HP/SP y cartera que acompañan siempre al menú. */
   updateStats() {
     const player = this.player;
     this.statEls.ATK.textContent = player.atk;
     this.statEls.DEF.textContent = player.def;
     this.statEls.HP.textContent = `${player.currentHp}/${player.maxHp}`;
     this.statEls.SP.textContent = `${player.currentSp}/${player.maxSp}`;
+    this.moneyEl.textContent = `¥ ${formatMoney(player.money)}`;
   }
 }

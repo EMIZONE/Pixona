@@ -104,12 +104,21 @@ y un temblor breve de la escena.
 Al derrotar a una sombra, un fundido negro presenta a la siguiente y la batalla continúa
 automáticamente. Son **cinco oponentes** con más HP, ataque y tamaño; entre combate y
 combate el jugador recupera todo el HP/SP. Al caer la quinta sombra aparece la pantalla
-de **resultados** con el desglose de EXP, dinero y botín de toda la tanda. Si el jugador
+de **resultados** con el desglose de EXP, dinero, botín y el **rango** alcanzado en la
+tanda. Si el jugador
 cae antes, la misma pantalla muestra la derrota y las sombras que sí derrotó.
 
 | Transición | Resultados |
 |---|---|
 | ![Siguiente sombra](docs/transition.png) | ![Resultados](docs/results.png) |
+
+## Pruebas
+
+La lógica (combate, niveles y peticiones) no toca el DOM, así que se prueba sin navegador:
+
+```bash
+node --test            # o: npm test
+```
 
 ## Estructura
 
@@ -123,13 +132,16 @@ data/enemies.json        las cinco sombras: estadísticas, tamaño, EXP, dinero 
 data/weapons.json        armas disponibles (ATK/DEF y retroceso)
 data/equipment.json      armaduras (DEF/EVA/VEL) y accesorios (EVA/VEL)
 data/items.json          catálogo de objetos (curación / SP)
-data/requests.json       peticiones pendientes y completadas
+data/requests.json       peticiones: estado, sombra objetivo (target) y recompensa
+data/progression.json    curva de EXP: umbrales de nivel
 assets/                  imágenes (hero_spritesheet.png, enemy_spritesheet.png,
                          background.png)
 js/main.js               arranque: carga datos, crea el motor y el bucle de render
 js/logic/Fighter.js      HP/SP, equipo, daño, evasión, bloqueo y objetos
 js/logic/BattleEngine.js máquina de estados de turnos
 js/logic/BattleFlow.js   encadena las cinco sombras y acumula EXP/dinero/botín
+js/logic/Progression.js  curva de niveles a partir de la EXP
+js/logic/Requests.js     cierra las peticiones cuya sombra cae
 js/ui/BattleMenu.js      menú de combate con teclado y ratón
 js/ui/UIController.js    barras, registro y feedback de turnos/golpes
 js/ui/TurnBanner.js      anuncio central de turno + chip permanente
@@ -141,7 +153,9 @@ js/ui/ResultScreen.js    pantalla final de EXP, dinero y botín
 js/graphics/             renderizador del fondo, sombras y animador de sprites
 js/utils/DataLoader.js   carga de JSON e imágenes
 js/utils/dom.js          helpers createNode/createButton para construir DOM
+js/utils/format.js       formato de dinero (separador de miles es-MX)
 js/utils/keys.js         mapa de teclas de navegación compartido por los menús
+tests/combat.test.js     pruebas de lógica de combate con node:test
 serve.ps1 / start.bat    servidor de desarrollo local (no se usa en GitHub Pages)
 docs/                    capturas (combate, turnos, golpes, transición, resultados,
                          menú, persona, peticiones, stats, calendario, sistema)
@@ -215,7 +229,8 @@ BattleEngine (VICTORY)
    │ onVictory (callback)
    ▼
 logic/BattleFlow.js
-   ├─ suma XP / dinero / botín (data/enemies.json)
+   ├─ suma XP / dinero / botín y comprueba el nivel (data/progression.json)
+   ├─ cierra las peticiones de la sombra derrotada (data/requests.json)
    ├─ sombras 1–4: ui/EncounterTransition.js
    │     └─ onCovered → advance() → engine.enter(nuevo Fighter) + HP/SP al máximo
    └─ sombra 5: ui/ResultScreen.js (resumen y reinicio)
@@ -248,7 +263,8 @@ callbacks de `main.js` y luego repinta el panel con `refreshPanel()`.
 | `data/weapons.json` | `Fighter`, `MainMenu`, `BattleEngine` | Bonificaciones de ATK/DEF y retroceso de cada arma. |
 | `data/equipment.json` | `Fighter`, `MainMenu` | Armaduras (DEF/EVA/VEL) y accesorios (EVA/VEL). |
 | `data/items.json` | `Fighter`, `BattleEngine`, `MainMenu`, `ResultScreen` | Curación/SP y nombres del botín. |
-| `data/requests.json` | `MainMenu` | Peticiones pendientes y completadas. |
+| `data/requests.json` | `BattleFlow`, `MainMenu` | Peticiones: `target` (sombra que la completa), recompensa y estado. |
+| `data/progression.json` | `Progression` | Umbrales de EXP que marcan cada nivel. |
 | `data/animations.json` | `main.js` → `SpriteAnimator` | Tamaño de frame, frames y fps. |
 | `assets/*.png` | `main.js` → `BackgroundRenderer`, `SpriteAnimator` | Fondo y spritesheets. |
 
@@ -274,19 +290,22 @@ Se abre con `M` o con el botón **MENÚ** del centro de la pantalla, y pausa el 
   categoría** con sus stats (ATK/DEF, DEF/EVA/VEL o EVA/VEL), la pieza equipada marcada
   con ▶ y `ENTER` para equipar; `ESC` vuelve a las ranuras. La armadura suma `DEF` y
   puede ajustar `EVA`/`VEL`; los accesorios ajustan `EVA` y `VEL`. El **Mandoble
-  sangriento** da mucho más ATK a cambio de 14 HP de retroceso por golpe.
+  sangriento** da mucho más ATK a cambio de 6 HP de retroceso por golpe.
 - **STATS** — atributos del Persona (FUERZA · MAGIA · RESISTENCIA · AGILIDAD · SUERTE)
   con barras sobre 99, más los derivados (HP/SP/ATK/DEF/EVA/VEL) y el equipo completo.
   Los atributos salen de `player.persona` en `data/characters.json` y por ahora son
   **solo de exhibición**: no modifican el combate.
 - **REQUEST** — peticiones de Shibuya separadas en **PENDIENTES** y **COMPLETADAS**,
-  con cliente, lugar, objetivo y recompensa.
+  con cliente, lugar, objetivo y recompensa. Cada pendiente trae un `target`: al
+  derrotar esa sombra la petición pasa a completada, paga su recompensa en dinero y
+  el registro de combate lo anota.
 - **CALENDARIO** — rejilla del mes actual con los días ya pasados en rojo y el día de
   hoy en blanco.
 - **SISTEMA** — cambia el **color de acento** de la interfaz (y de las sombras de los
   personajes) entre seis temas, y el **tamaño del texto** (S / M / L / XL). Incluye
   RESTABLECER. En el combate, el HUD limita su crecimiento en L/XL para no tapar la
-  ficha del jugador.
+  ficha del jugador. Los dos ajustes se guardan en el navegador (`localStorage`) y se
+  aplican al arrancar.
 - **CONFIDENT** — de momento muestra un panel sin contenido.
 
 Las estadísticas del panel inferior izquierdo se actualizan al equipar. Al cerrar el
@@ -332,13 +351,21 @@ y≈1004 y los del enemigo en y≈762.
   el JSON ya no repite `hp`/`sp`.
 - La tanda son cinco combates seguidos; entre uno y otro se restauran HP y SP. No hay
   guardado: al reiniciar desde los resultados se recarga la página.
-- Las peticiones de REQUEST son contenido estático: no cambian de estado ni pagan la
-  recompensa.
+- Las peticiones de REQUEST se cierran al derrotar su `target`; no tienen más fases ni
+  objetivo alternativo.
 - Todo el equipo está disponible desde el principio (no hay tienda ni inventario de
   armaduras).
-- El **Mandoble sangriento** quita 14 HP al atacante con cada golpe; el retroceso se
+- La **VEL** decide quién abre cada combate: si la sombra es más rápida, ataca antes.
+- Algunas sombras cambian su ataque por una **habilidad** (`skillChance` /
+  `skillPower` en `data/enemies.json`), que pega más fuerte sin gastar SP.
+- El **Mandoble sangriento** quita 6 HP al atacante con cada golpe; el retroceso se
   muestra en rojo sobre la ficha del jugador.
-- El tema y el tamaño de texto se reinician al recargar (no hay `localStorage`).
+- El tema y el tamaño de texto se guardan en `localStorage`; el resto de la partida
+  (dinero, EXP, nivel, inventario) empieza de cero en cada recarga.
 - No hay sonido. El héroe no tiene animación de `hurt`/`defeat`: solo el enemigo las
   tiene, así que al recibir daño el héroe no se estremece.
+- Las tipografías vienen de Google Fonts: sin red se usan las fuentes del sistema. El
+  CSP de `index.html` solo permite scripts locales y esas dos hojas.
 - Los atributos del Persona (STR/MAG/END/AGI/LUK) son solo de exhibición.
+- El dinero y la EXP se muestran al terminar la tanda (menú y resultados), pero no hay
+  tienda ni progresión persistente entre recargas.

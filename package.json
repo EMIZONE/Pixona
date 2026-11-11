@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "powershell -NoProfile -ExecutionPolicy Bypass -File ./serve.ps1 -Open",
-    "serve": "powershell -NoProfile -ExecutionPolicy Bypass -File ./serve.ps1"
+    "serve": "powershell -NoProfile -ExecutionPolicy Bypass -File ./serve.ps1",
+    "test": "node --test"
   },
   "keywords": [
     "rpg",

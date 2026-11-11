@@ -1,17 +1,16 @@
 import { createNode } from '../utils/dom.js';
+import { formatMoney } from '../utils/format.js';
 
 /**
  * Pantalla final de la tanda, con estética Persona.
  *
- * - victoria: lista las sombras derrotadas, EXP, dinero y botín total;
+ * - victoria: lista las sombras derrotadas, EXP, nivel, dinero y botín total;
  * - derrota: lista solo las derrotadas y muestra dónde cayó el jugador.
  *
  * El botón (o Enter/Z/Espacio) recarga la página: no hay guardado.
  */
 const RESTART_KEYS = new Set(['Enter', 'z', 'Z', ' ']);
 const SETTLE_DELAY_MS = 800;
-
-const formatMoney = (value) => value.toLocaleString('es-MX');
 
 export class ResultScreen {
   constructor({ items, onRestart }) {
@@ -27,27 +26,35 @@ export class ResultScreen {
     this.rows = document.getElementById('result-rows');
     this.xpEl = document.getElementById('result-xp');
     this.moneyEl = document.getElementById('result-money');
+    this.levelEl = document.getElementById('result-level');
     this.lootEl = document.getElementById('result-loot');
     this.restartBtn = document.getElementById('result-restart');
 
     this.restartBtn.addEventListener('click', () => this.onRestart());
 
-    // Al estar visible, Enter/Z/Espacio reinician.
+    // Al estar visible, Enter/Z/Espacio reinician y Tab no sale de la tarjeta.
     window.addEventListener('keydown', (event) => {
-      if (!this.visible || !RESTART_KEYS.has(event.key)) return;
+      if (!this.visible) return;
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        this.restartBtn.focus();
+        return;
+      }
+      if (!RESTART_KEYS.has(event.key)) return;
       event.preventDefault();
       this.onRestart();
     });
   }
 
   /** Muestra el resumen y rellena todos los bloques. */
-  show({ victory, defeated, total, rewards, fallenAt }) {
+  show({ victory, defeated, total, rewards, level, fallenAt }) {
     this.visible = true;
     clearTimeout(this.settleTimer);
     this.root.classList.remove('is-settled');
     this.root.classList.toggle('is-defeat', !victory);
     this.root.classList.add('is-open');
     this.root.setAttribute('aria-hidden', 'false');
+    this.root.inert = false;
     // Pasada la animación, `is-settled` garantiza que todo quede visible.
     this.settleTimer = setTimeout(() => this.root.classList.add('is-settled'), SETTLE_DELAY_MS);
 
@@ -62,6 +69,7 @@ export class ResultScreen {
 
     this.xpEl.textContent = `+${rewards.xp}`;
     this.moneyEl.textContent = `¥ ${formatMoney(rewards.money)}`;
+    this.levelEl.textContent = String(level);
 
     // El foco va al botón para que Enter funcione sin usar el ratón.
     this.restartBtn.focus();

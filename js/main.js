@@ -11,6 +11,7 @@ import { GroundShadow } from './graphics/GroundShadow.js';
 import { SpriteAnimator } from './graphics/SpriteAnimator.js';
 import { Fighter } from './logic/Fighter.js';
 import { BattleFlow } from './logic/BattleFlow.js';
+import { Progression } from './logic/Progression.js';
 import { BATTLE_STATE } from './logic/BattleEngine.js';
 import { UIController } from './ui/UIController.js';
 import { MainMenu } from './ui/MainMenu.js';
@@ -38,17 +39,28 @@ const TURN_SCALE_MS = 200;
 // Color fijo del lado iluminado del contorno; el otro lado usa el acento.
 const OUTLINE_LIGHT = '#ffffff';
 
+/** Interpolación del tamaño de turno, independiente del frame anterior. */
+const approach = (current, target, deltaTime) =>
+  current + (target - current) * Math.min(1, deltaTime / TURN_SCALE_MS);
+
 /**
  * Reparto de una entidad en coordenadas del escenario (1920x1080). Las sombras
  * más grandes se corren a la derecha la mitad de su ancho extra para que su
- * borde izquierdo nunca pise al héroe.
+ * borde izquierdo nunca pise al héroe. El bucle de render pasa un objeto
+ * reutilizable en `out` para no reservar memoria en cada frame.
  */
-function entityLayout(side, flow) {
+function entityLayout(side, flow, out = {}) {
   const base = ENTITY_LAYOUT[side];
-  if (side === 'player') return base;
+  out.x = base.x;
+  out.footY = base.footY;
+  out.height = base.height;
+  out.sway = base.sway;
 
-  const height = flow.encounter.height;
-  return { ...base, x: base.x + (height - base.height) / 2, height };
+  if (side === 'enemy') {
+    out.height = flow.encounter.height;
+    out.x += (out.height - base.height) / 2;
+  }
+  return out;
 }
 
 /**
@@ -72,9 +84,9 @@ function isBattleUiCovered() {
     resultScreen.classList.contains('is-open');
 }
 
-/** Carga en paralelo los siete JSON y las tres imágenes del juego. */
+/** Carga en paralelo los ocho JSON y las tres imágenes del juego. */
 async function loadAssets() {
-  const [characters, animations, weapons, items, equipment, requests, enemies,
+  const [characters, animations, weapons, items, equipment, requests, enemies, progression,
     hero, enemy, background] = await Promise.all([
     DataLoader.loadJSON('data/characters.json'),
     DataLoader.loadJSON('data/animations.json'),
@@ -83,12 +95,16 @@ async function loadAssets() {
     DataLoader.loadJSON('data/equipment.json'),
     DataLoader.loadJSON('data/requests.json'),
     DataLoader.loadJSON('data/enemies.json'),
+    DataLoader.loadJSON('data/progression.json'),
     DataLoader.loadImage('assets/hero_spritesheet.png'),
     DataLoader.loadImage('assets/enemy_spritesheet.png'),
     DataLoader.loadImage('assets/background.png')
   ]);
 
-  return { characters, animations, weapons, items, equipment, requests, enemies, hero, enemy, background };
+  return {
+    characters, animations, weapons, items, equipment, requests, enemies, progression,
+    hero, enemy, background
+  };
 }
 
 /** Lee el acento actual de la hoja de estilos (el tema por defecto). */
@@ -117,13 +133,16 @@ function startRenderLoop({ bgRenderer, flow, animators, shadows, enemyStatusEl }
   // 0 = tamaño normal, 1 = tamaño de turno. Se interpola para no dar saltos.
   let playerFocus = 0;
   let enemyFocus = 0;
+  // Reutilizados: el HUD solo se toca cuando el valor cambia de verdad.
+  const enemyPos = {};
+  const lastStatus = { left: NaN, top: NaN, opacity: NaN };
 
   function frame(currentTime) {
     const deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    const playerPos = entityLayout('player');
-    const enemyPos = entityLayout('enemy', flow);
+    const playerPos = ENTITY_LAYOUT.player;
+    entityLayout('enemy', flow, enemyPos);
     const enemy = flow.enemy;
 
     if (enemy !== renderedEnemy) {
@@ -137,11 +156,9 @@ function startRenderLoop({ bgRenderer, flow, animators, shadows, enemyStatusEl }
     const playerTarget =
       state === BATTLE_STATE.PLAYER_TURN || state === BATTLE_STATE.RESOLVING ? 1 : 0;
     const enemyTarget = state === BATTLE_STATE.ENEMY_TURN ? 1 : 0;
-    const approach = (current, target) =>
-      current + (target - current) * Math.min(1, deltaTime / TURN_SCALE_MS);
 
-    playerFocus = approach(playerFocus, playerTarget);
-    enemyFocus = approach(enemyFocus, enemyTarget);
+    playerFocus = approach(playerFocus, playerTarget, deltaTime);
+    enemyFocus = approach(enemyFocus, enemyTarget, deltaTime);
 
     const playerHeight = playerPos.height * (1 + TURN_SCALE * playerFocus);
     const enemyHeight = enemyPos.height * (1 + TURN_SCALE * enemyFocus);
@@ -158,10 +175,20 @@ function startRenderLoop({ bgRenderer, flow, animators, shadows, enemyStatusEl }
     }
 
     // --- Tarjeta de HP sobre la cabeza del enemigo ---------------------
-    const enemyStatusTop = bgRenderer.screenY(enemyPos.footY - enemyHeight) - ENEMY_STATUS_GAP;
-    enemyStatusEl.style.left = `${bgRenderer.screenX(enemyPos.x + enemySway)}px`;
-    enemyStatusEl.style.top = `${enemyStatusTop}px`;
-    enemyStatusEl.style.opacity = String(enemyShadowOpacity);
+    const statusLeft = bgRenderer.screenX(enemyPos.x + enemySway);
+    const statusTop = bgRenderer.screenY(enemyPos.footY - enemyHeight) - ENEMY_STATUS_GAP;
+    if (statusLeft !== lastStatus.left) {
+      enemyStatusEl.style.left = `${statusLeft}px`;
+      lastStatus.left = statusLeft;
+    }
+    if (statusTop !== lastStatus.top) {
+      enemyStatusEl.style.top = `${statusTop}px`;
+      lastStatus.top = statusTop;
+    }
+    if (enemyShadowOpacity !== lastStatus.opacity) {
+      enemyStatusEl.style.opacity = String(enemyShadowOpacity);
+      lastStatus.opacity = enemyShadowOpacity;
+    }
 
     animators.player.update(deltaTime);
     animators.enemy.update(deltaTime);
@@ -238,7 +265,9 @@ async function bootstrap() {
       items: assets.items,
       onRestart: () => window.location.reload()
     }),
-    catalogs
+    catalogs,
+    requests: assets.requests,
+    progression: new Progression(assets.progression)
   });
 
   const mainMenu = new MainMenu({

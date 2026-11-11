@@ -22,10 +22,12 @@ export class Fighter {
   /**
    * @param {object} data definición del JSON (personaje o sombra)
    * @param {{ items: object, weapons: object[], equipment: object }} catalogs
+   * @param {() => number} rng fuente de azar; las pruebas pasan una fija
    */
-  constructor(data, { items, weapons, equipment }) {
+  constructor(data, { items, weapons, equipment }, rng = Math.random) {
     this.id = data.id;
     this.name = data.name;
+    this.rng = rng;
 
     this.maxHp = data.maxHp;
     this.currentHp = this.maxHp;
@@ -37,6 +39,14 @@ export class Fighter {
     this.baseSpeed = data.speed;
     this.baseEvasion = data.evasion;
     this.blockReduce = data.blockReduce;
+
+    // Habilidad de las sombras (el jugador ataca con el menú, no con esto).
+    this.skillChance = data.skillChance;
+    this.skillPower = data.skillPower;
+
+    // Cartera y experiencia del jugador; las sombras traen 0 en el JSON.
+    this.money = data.money;
+    this.xp = data.xp;
 
     this.items = { ...data.items };
     this.itemCatalog = items;
@@ -125,14 +135,15 @@ export class Fighter {
    */
   receiveAttack(incomingAtk) {
     const evasion = this.isDodging ? this.evasion + 0.5 : this.evasion;
-    if (Math.random() < evasion) {
+    if (this.rng() < evasion) {
       return { evaded: true, damage: 0, blocked: false };
     }
 
     const blocked = this.isBlocking;
-    // Variación por golpe: -4 a +4 puntos antes del bloqueo.
-    const variance = Math.floor(Math.random() * (DAMAGE_VARIANCE * 2 + 1)) - DAMAGE_VARIANCE;
-    let damage = Math.max(1, incomingAtk - this.def + variance);
+    // Variación por golpe: -4 a +4 puntos antes del bloqueo. El redondeo deja
+    // enteros también con ataques fraccionarios (Habilidad usa atk * 1.5).
+    const variance = Math.floor(this.rng() * (DAMAGE_VARIANCE * 2 + 1)) - DAMAGE_VARIANCE;
+    let damage = Math.max(1, Math.round(incomingAtk - this.def + variance));
     if (blocked) {
       damage = Math.max(1, Math.floor(damage * (1 - this.blockReduce)));
     }

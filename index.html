@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="PIXONA: motor de combate por turnos con estética Persona. HTML, CSS y JavaScript puro.">
   <meta name="color-scheme" content="dark">
+  <!-- Tipografías externas: el CSP las permite explícitamente. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:">
   <title>PIXONA Engine - Battle System</title>
-  <!-- Tipografía externa (Google Fonts). -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -14,7 +15,7 @@
 </head>
 <body>
   <div id="app">
-    <canvas id="game-canvas"></canvas>
+    <canvas id="game-canvas" role="img" aria-label="Escena de combate"></canvas>
 
     <!-- Destello de impacto: capa entre la escena y el HUD. -->
     <div id="hit-flash" aria-hidden="true"></div>
@@ -77,7 +78,8 @@
 
   <!-- Menú principal a pantalla completa. El contenido de opciones y paneles
        se construye desde js/ui/MainMenu.js. -->
-  <div id="main-menu" class="main-menu" hidden>
+  <div id="main-menu" class="main-menu" role="dialog" aria-modal="true"
+       aria-label="Menú principal" hidden>
     <div class="menu-backdrop" data-menu-dismiss aria-hidden="true"></div>
     <div class="menu-halftone" aria-hidden="true"></div>
     <div class="menu-portrait" aria-hidden="true"></div>
@@ -90,15 +92,13 @@
 
     <nav id="menu-options" class="menu-options" aria-label="Opciones del menú"></nav>
 
-    <div id="menu-panel-slot">
-      <section class="menu-submenu" aria-label="Detalle de la opción">
-        <header class="submenu-head">
-          <h2 id="menu-submenu-title" class="submenu-title">ARMA</h2>
-          <p id="menu-detail" class="submenu-detail">Elige un arma. Solo cambian las estadísticas.</p>
-        </header>
-        <div id="menu-submenu-list" class="submenu-list"></div>
-      </section>
-    </div>
+    <section class="menu-submenu" aria-label="Detalle de la opción">
+      <header class="submenu-head">
+        <h2 id="menu-submenu-title" class="submenu-title">ARMA</h2>
+        <p id="menu-detail" class="submenu-detail">Elige un arma. Solo cambian las estadísticas.</p>
+      </header>
+      <div id="menu-submenu-list" class="submenu-list"></div>
+    </section>
 
     <div id="menu-stats" class="menu-stats"></div>
 
@@ -109,7 +109,7 @@
   </div>
 
   <!-- Fundido entre sombras: la tarjeta se rellena desde EncounterTransition. -->
-  <div id="encounter-overlay" class="encounter-overlay" aria-hidden="true">
+  <div id="encounter-overlay" class="encounter-overlay" aria-hidden="true" inert>
     <div class="encounter-band" aria-hidden="true"></div>
     <section class="encounter-card">
       <span id="encounter-count" class="encounter-count">SOMBRA 1 / 5</span>
@@ -120,7 +120,7 @@
   </div>
 
   <!-- Pantalla final. ResultScreen rellena filas, totales y botín. -->
-  <div id="result-screen" class="result-screen" aria-hidden="true">
+  <div id="result-screen" class="result-screen" aria-hidden="true" inert>
     <div class="result-backdrop" aria-hidden="true"></div>
     <div class="result-halftone" aria-hidden="true"></div>
 
@@ -137,6 +137,10 @@
         <div class="result-total">
           <span class="result-total-label">EXP TOTAL</span>
           <span id="result-xp" class="result-total-value">+0</span>
+        </div>
+        <div class="result-total">
+          <span class="result-total-label">RANGO</span>
+          <span id="result-level" class="result-total-value">1</span>
         </div>
         <div class="result-total">
           <span class="result-total-label">DINERO</span>
