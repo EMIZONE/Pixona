@@ -121,6 +121,8 @@ docs/*.png, docs/*.mmd        README screenshots and diagrams
   as **RANGO** (the Persona level in the stats panel is separate).
 
 ### Visuals
+- Fonts: `--font-display` is Silkscreen (pixel headings), `--font-ui` is Pixelify Sans
+  (everything else); both come from Google Fonts and the CSP allows only those hosts.
 - `SpriteAnimator` derives the grid from `image.width / frameWidth`; `playOnce` returns
   to `idle`; the two-color outline is cached per frame + color, offset capped at 3.3
   stage units. Hero lunges +1, enemy -1.
