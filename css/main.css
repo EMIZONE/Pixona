@@ -25,6 +25,8 @@
   /* Tipografía retro: Silkscreen para titulares, Pixelify Sans para el resto. */
   --font-ui: 'Pixelify Sans', 'Courier New', monospace;
   --font-display: 'Silkscreen', 'Courier New', monospace;
+  /* Números del HUD: pixel de rejilla alta, legible en tamaños pequeños. */
+  --font-numbers: 'Jersey 15', ui-monospace, monospace;
 }
 
 /* Titulares con la display pixelada estilo arcade. */
@@ -143,7 +145,11 @@ canvas {
 }
 
 .bar-text {
-  font-size: min(0.95rem, 16px);
+  font-family: var(--font-numbers);
+  font-size: min(1.05rem, 18px);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
   display: block;
   margin-bottom: 6px;
 }
@@ -168,10 +174,10 @@ canvas {
   color: var(--white-solid);
   border: 3px solid var(--white-solid);
   padding: 12px 36px;
-  font-family: var(--font-display);
+  font-family: var(--font-numbers);
   font-size: min(1.5rem, 26px);
-  font-weight: bold;
-  letter-spacing: 0.03em;
+  font-weight: 400;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
   text-align: left;
@@ -366,11 +372,11 @@ canvas {
 }
 
 .weather-temp {
-  font-family: var(--font-display);
-  font-size: min(2.4rem, 38px);
-  font-weight: bold;
+  font-family: var(--font-numbers);
+  font-size: min(2.6rem, 42px);
+  font-weight: 400;
   line-height: 0.95;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
 
@@ -723,8 +729,10 @@ canvas {
 }
 
 .menu-stat-value {
+  font-family: var(--font-numbers);
   font-size: 1.35rem;
-  font-weight: bold;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
   color: var(--white-solid);
   text-shadow: 2px 2px 0 #000;
 }
@@ -1792,11 +1800,12 @@ canvas {
   background: color-mix(in srgb, var(--white-solid) 82%, transparent);
   clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
   filter: drop-shadow(4px 4px 0 var(--black-solid));
-  font-family: var(--font-ui);
+  font-family: var(--font-numbers);
   font-size: clamp(2.2rem, 4.2vw, 3.4rem);
-  font-weight: bold;
+  font-weight: 400;
   line-height: 1;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
   color: var(--black-solid);
   transform: translate(-50%, -50%) skewX(-8deg);
   animation: damage-rise 1.55s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -1853,12 +1862,12 @@ canvas {
 }
 
 @keyframes damage-rise {
-  0% { opacity: 0; transform: translate(-50%, -30%) skewX(-8deg) rotate(-10deg) scale(0.6); }
-  10% { opacity: 1; transform: translate(-50%, -60%) skewX(-8deg) rotate(5deg) scale(1.15); }
-  20% { transform: translate(-50%, -75%) skewX(-8deg) rotate(-3deg) scale(1); }
-  40% { transform: translate(-50%, -95%) skewX(-8deg) rotate(2deg) scale(1); }
-  70% { opacity: 1; transform: translate(-50%, -120%) skewX(-8deg) rotate(0deg) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -190%) skewX(-8deg) rotate(0deg) scale(1); }
+  0% { opacity: 0; transform: translate(-50%, -30%) skewX(-8deg) scale(0.6); }
+  10% { opacity: 1; transform: translate(-50%, -60%) skewX(-8deg) scale(1.15); }
+  20% { transform: translate(-50%, -75%) skewX(-8deg) scale(1); }
+  40% { transform: translate(-50%, -95%) skewX(-8deg) scale(1); }
+  70% { opacity: 1; transform: translate(-50%, -120%) skewX(-8deg) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -190%) skewX(-8deg) scale(1); }
 }
 
 /* Temblor de la escena; el HUD se queda quieto. */
@@ -1894,7 +1903,7 @@ canvas {
   }
 
   .weather-temp {
-    font-size: min(1.8rem, 28px);
+    font-size: min(2rem, 32px);
   }
 
   .weather-condition {

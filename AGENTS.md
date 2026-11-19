@@ -145,8 +145,10 @@ docs/*.png, docs/*.mmd        README screenshots and diagrams
 
 ### Visuals
 - Fonts: `--font-display` is Silkscreen (pixel headings), `--font-ui` is Pixelify Sans
-  (everything else); both come from Google Fonts. The CSP allows those hosts plus
-  `api.open-meteo.com` for the weather fetch.
+  (everything else); both come from Google Fonts. HUD values and battle action labels
+  (`bar-text`, `.menu-btn`, `.menu-stat-value`) plus temperature and damage floats use
+  `Jersey 15`, a higher-resolution pixel face, so digits stay unambiguous. The CSP
+  allows those hosts plus `api.open-meteo.com` for the weather fetch.
 - `SpriteAnimator` derives the grid from `image.width / frameWidth`; `playOnce` returns
   to `idle`; the two-color outline is cached per frame + color, offset capped at 3.3
   stage units. Hero lunges +1, enemy -1.

@@ -92,8 +92,8 @@ function gearConfig(menu, category) {
       label: 'ACCESORIO',
       list: menu.equipment.accessories,
       current: player.accessory,
-      describe: (item) => describeAccessory(menu, item),
-      stats: (item) => accessoryBonus(menu, item),
+      describe: (item) => describeAccessory(item),
+      stats: (item) => accessoryBonus(item),
       equip: (item) => equipAccessory(menu, item)
     }
   };
