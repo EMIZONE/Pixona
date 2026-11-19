@@ -17,6 +17,7 @@ import { UIController } from './ui/UIController.js';
 import { MainMenu } from './ui/MainMenu.js';
 import { EncounterTransition } from './ui/EncounterTransition.js';
 import { ResultScreen } from './ui/ResultScreen.js';
+import { WeatherWidget } from './ui/WeatherWidget.js';
 
 /**
  * Reparto de la escena en coordenadas del escenario (1920x1080). El héroe es
@@ -64,14 +65,14 @@ function entityLayout(side, flow, out = {}) {
 }
 
 /**
- * Punto del cuerpo (centro del torso) en píxeles de pantalla, para colgar ahí
- * los números de daño en vez de sobre la ficha de HP.
+ * Punto del cuerpo en píxeles de pantalla. `heightRatio` elige la altura dentro
+ * del frame: 0.5 es el torso (números de daño) y 0.98 la cabeza (estados).
  */
-function entityScreenPoint(side, flow, bgRenderer) {
+function entityScreenPoint(side, flow, bgRenderer, heightRatio) {
   const layout = entityLayout(side, flow);
   return {
     x: bgRenderer.screenX(layout.x),
-    y: bgRenderer.screenY(layout.footY - layout.height * 0.5)
+    y: bgRenderer.screenY(layout.footY - layout.height * heightRatio)
   };
 }
 
@@ -84,10 +85,10 @@ function isBattleUiCovered() {
     resultScreen.classList.contains('is-open');
 }
 
-/** Carga en paralelo los ocho JSON y las tres imágenes del juego. */
+/** Carga en paralelo los nueve JSON y las tres imágenes del juego. */
 async function loadAssets() {
   const [characters, animations, weapons, items, equipment, requests, enemies, progression,
-    hero, enemy, background] = await Promise.all([
+    weather, hero, enemy, background] = await Promise.all([
     DataLoader.loadJSON('data/characters.json'),
     DataLoader.loadJSON('data/animations.json'),
     DataLoader.loadJSON('data/weapons.json'),
@@ -96,6 +97,7 @@ async function loadAssets() {
     DataLoader.loadJSON('data/requests.json'),
     DataLoader.loadJSON('data/enemies.json'),
     DataLoader.loadJSON('data/progression.json'),
+    DataLoader.loadJSON('data/weather.json'),
     DataLoader.loadImage('assets/hero_spritesheet.png'),
     DataLoader.loadImage('assets/enemy_spritesheet.png'),
     DataLoader.loadImage('assets/background.png')
@@ -103,7 +105,7 @@ async function loadAssets() {
 
   return {
     characters, animations, weapons, items, equipment, requests, enemies, progression,
-    hero, enemy, background
+    weather, hero, enemy, background
   };
 }
 
@@ -249,11 +251,15 @@ async function bootstrap() {
   // Contorno dinámico: blanco arriba-izquierda y acento abajo-derecha.
   applyTheme(readAccent(), animators, shadows);
 
+  // El clima se consulta en paralelo; si la red falla, el combate sigue igual.
+  new WeatherWidget(assets.weather).start();
+
   // --- Combate y paneles ----------------------------------------------
   // El callback se ejecuta más tarde, cuando `flow` ya existe.
   const ui = new UIController(
     (action) => flow.engine.executePlayerAction(action),
-    (side) => entityScreenPoint(side, flow, bgRenderer)
+    (side) => entityScreenPoint(side, flow, bgRenderer, 0.5),
+    (side) => entityScreenPoint(side, flow, bgRenderer, 0.98)
   );
   const flow = new BattleFlow({
     player,

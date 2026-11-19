@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="PIXONA: motor de combate por turnos con estética Persona. HTML, CSS y JavaScript puro.">
   <meta name="color-scheme" content="dark">
-  <!-- Tipografías retro externas: el CSP las permite explícitamente. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:">
+  <!-- CSP: tipografías de Google Fonts y API de clima de Open-Meteo. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.open-meteo.com">
   <title>PIXONA Engine - Battle System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +21,21 @@
     <div id="hit-flash" aria-hidden="true"></div>
 
     <div id="ui-layer">
+      <!-- Clima actual: WeatherWidget lo actualiza desde Open-Meteo. -->
+      <aside id="weather-widget" class="weather-widget" aria-live="polite"
+             aria-label="Clima actual">
+        <span class="weather-kicker">
+          <span class="weather-dot" aria-hidden="true"></span>
+          <span class="weather-prefix">CLIMA ·</span>
+          <span id="weather-place" class="weather-place">CIUDAD DE MÉXICO</span>
+        </span>
+        <div class="weather-body">
+          <span id="weather-temp" class="weather-temp">--°</span>
+          <span id="weather-condition" class="weather-condition">CONECTANDO…</span>
+        </div>
+        <span id="weather-meta" class="weather-meta">OPEN-METEO</span>
+      </aside>
+
       <!-- Columna izquierda: acciones del combate + ficha del jugador.
            Se apilan en flex para que el texto L/XL nunca las solape. -->
       <div class="battle-actions">

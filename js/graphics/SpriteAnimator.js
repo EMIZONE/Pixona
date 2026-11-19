@@ -1,9 +1,9 @@
 /**
  * Animador de spritesheets en pixel art.
  *
- * `data/animations.json` define el tamaño de frame y los frames de cada
- * animación; el ancho de la imagen da las columnas de la rejilla. `playOnce`
- * reproduce una animación sin bucle y vuelve a `idle` al terminar.
+ * `data/animations.json` define el tamaño de frame, el punto de anclaje y los
+ * frames de cada animación; el ancho de la imagen da las columnas de la rejilla.
+ * `playOnce` reproduce una animación sin bucle y vuelve a `idle` al terminar.
  *
  * El contorno de dos colores se genera en un canvas aparte a partir del alfa y
  * se dibuja desplazado antes del sprite, así sigue al tema de la interfaz.
@@ -17,6 +17,11 @@ export class SpriteAnimator {
     this.image = image;
     this.meta = metadata;
     this.columns = Math.floor(image.width / metadata.frameWidth);
+    // Punto del frame (en píxeles de la rejilla) que cae sobre el ancla del
+    // escenario. El héroe no está centrado en su frame: la espada ocupa el lado
+    // derecho, así que sus pies son el ancla.
+    this.anchorX = metadata.anchorX;
+    this.anchorY = metadata.anchorY;
 
     this.currentAnim = 'idle';
     this.frameIndex = 0;
@@ -122,14 +127,14 @@ export class SpriteAnimator {
   }
 
   /**
-   * Dibuja el frame actual con la base en `bottomY`, centrado en `centerX` y
+   * Dibuja el frame actual con su ancla (pies) sobre (`centerX`, `bottomY`) y
    * escalado a `height`. El contorno se pinta antes, desplazado 1 píxel.
    */
   drawCentered(ctx, centerX, bottomY, height) {
     const scale = height / this.meta.frameHeight;
     const width = this.meta.frameWidth * scale;
-    const x = centerX - width / 2 + this.attackLunge(height);
-    const y = bottomY - height;
+    const x = centerX - this.anchorX * scale + this.attackLunge(height);
+    const y = bottomY - this.anchorY * scale;
 
     if (this.outline) this.drawOutline(ctx, x, y, width, height, scale);
 

@@ -74,6 +74,16 @@ Esquivar (5 SP, +50% evasión) · Objeto (Poción, cura 40 HP, 3 cargas).
 
 Los mensajes del combate aparecen en el registro de la esquina inferior derecha.
 
+## Clima
+
+La esquina superior izquierda muestra el clima actual de la ubicación configurada,
+consultado a [Open-Meteo](https://open-meteo.com) (sin clave ni registro). La tarjeta se
+refresca cada 10 minutos, reintenta al minuto si falla y, si no hay red, conserva la
+última lectura mientras el combate sigue.
+
+La ciudad, la coordenada y el intervalo viven en `data/weather.json`. Si cambias de
+proveedor, actualiza también el `connect-src` de la CSP en `index.html`.
+
 ## Turnos y golpes
 
 Cada turno se anuncia con una banda central y con un **chip permanente** bajo el botón
@@ -82,18 +92,20 @@ Cada turno se anuncia con una banda central y con un **chip permanente** bajo el
 - **TU TURNO** — banda del color de acento; el jugador puede elegir acción.
 - **TURNO DEL ENEMIGO** — banda negra con texto rojo; la sombra se prepara.
 
-La banda queda **detrás del HUD**, así que nunca tapa los botones ni las fichas de
-HP/SP. El personaje al que le toca el turno **crece un 7 %** con una transición suave;
-el otro vuelve a su tamaño normal.
+La banda queda **por encima del HUD** del combate (botones, fichas, registro y chip);
+solo la tapan los overlays modales del menú, la transición y los resultados. El
+personaje al que le toca el turno **crece un 7 %** con una transición suave; el otro
+vuelve a su tamaño normal.
 
 Los ataques son más lentos y tienen fases: la animación arranca, el daño impacta a los
 ~250 ms (no al pulsar el botón), el atacante se recupera durante otros ~350 ms y el turno
-espera una pausa de ~250 ms antes de cambiar. Así se ve el impulso, el golpe y la
-reacción antes de que aparezca el siguiente turno.
+espera una pausa de ~250 ms antes de cambiar. El anuncio del siguiente turno espera
+además a que el número de daño termine de desvanecerse (~1.65 s), para que no se pise.
 
-Los golpes añaden un número flotante sobre la ficha del herido (`-20`, `ESQUIVA`,
-`BLOQUEO -12`), un destello de pantalla (blanco al golpear a la sombra, rojo al recibir)
-y un temblor breve de la escena.
+Los golpes añaden un número flotante sobre la ficha del herido (`-20`, `ESQUIVA`), un destello de pantalla (blanco al golpear a la sombra, rojo al recibir)
+y un temblor breve de la escena. Al bloquear o esquivar, el combatiente conserva una
+etiqueta **BLOQUEO** / **ESQUIVA** sobre la cabeza hasta un poco después de empezar su siguiente turno;
+los golpes bloqueados muestran solo el daño reducido.
 
 | Turno del jugador | Turno del enemigo | Impacto |
 |---|---|---|
@@ -114,7 +126,8 @@ cae antes, la misma pantalla muestra la derrota y las sombras que sí derrotó.
 
 ## Pruebas
 
-La lógica (combate, niveles y peticiones) no toca el DOM, así que se prueba sin navegador:
+La lógica (combate, niveles y peticiones) y el mapeo de códigos del clima no tocan el
+DOM, así que se prueban sin navegador:
 
 ```bash
 node --test            # o: npm test
@@ -134,6 +147,7 @@ data/equipment.json      armaduras (DEF/EVA/VEL) y accesorios (EVA/VEL)
 data/items.json          catálogo de objetos (curación / SP)
 data/requests.json       peticiones: estado, sombra objetivo (target) y recompensa
 data/progression.json    curva de EXP: umbrales de nivel
+data/weather.json        ubicación del clima: ciudad, latitud, longitud y refresco
 assets/                  imágenes (hero_spritesheet.png, enemy_spritesheet.png,
                          background.png)
 js/main.js               arranque: carga datos, crea el motor y el bucle de render
@@ -142,9 +156,11 @@ js/logic/BattleEngine.js máquina de estados de turnos
 js/logic/BattleFlow.js   encadena las cinco sombras y acumula EXP/dinero/botín
 js/logic/Progression.js  curva de niveles a partir de la EXP
 js/logic/Requests.js     cierra las peticiones cuya sombra cae
+js/services/WeatherService.js  consulta el clima actual a Open-Meteo
 js/ui/BattleMenu.js      menú de combate con teclado y ratón
 js/ui/UIController.js    barras, registro y feedback de turnos/golpes
 js/ui/TurnBanner.js      anuncio central de turno + chip permanente
+js/ui/WeatherWidget.js   tarjeta de clima de la esquina superior izquierda
 js/ui/MainMenu.js        menú principal de pantalla completa
 js/ui/panels/            un panel por archivo: objeto, persona (con el arsenal),
                          stats, request, calendario, sistema y el decorativo CONFIDENT
@@ -156,6 +172,7 @@ js/utils/dom.js          helpers createNode/createButton para construir DOM
 js/utils/format.js       formato de dinero (separador de miles es-MX)
 js/utils/keys.js         mapa de teclas de navegación compartido por los menús
 tests/combat.test.js     pruebas de lógica de combate con node:test
+tests/weather.test.js    pruebas de etiquetas WMO y configuración del clima
 serve.ps1 / start.bat    servidor de desarrollo local (no se usa en GitHub Pages)
 docs/                    capturas (combate, turnos, golpes, transición, resultados,
                          menú, persona, peticiones, stats, calendario, sistema)
@@ -187,6 +204,7 @@ index.html
     │   ├── ui/EncounterTransition.js
     │   └── ui/ResultScreen.js ─────► utils/dom.js
     ├── ui/MainMenu.js ─────────────► utils/dom.js, utils/keys.js, ui/panels/*.js
+    ├── ui/WeatherWidget.js ────────► services/WeatherService.js
     ├── utils/keys.js ◄───────────── ui/BattleMenu.js
     ├── graphics/BackgroundRenderer.js
     ├── graphics/SpriteAnimator.js
@@ -325,14 +343,20 @@ Los sprites y el fondo son **placeholders**; sustitúyelos por tu propio arte:
 
 | Archivo | Rejilla | Animaciones |
 |---|---|---|
-| `assets/hero_spritesheet.png` | 8 frames de 48×48 (4×2) | `idle` 0–3 · `attack` 4–7 |
+| `assets/hero_spritesheet.png` | 7 frames de 160×160 (4×2; el último hueco está vacío) | `idle` 0–3 · `attack` 4–6 |
 | `assets/enemy_spritesheet.png` | 16 frames de 64×64 (4×4) | `idle` 0–3 · `attack` 4–7 · `hurt` 8–11 · `defeat` 12–15 |
 
 El enemigo se dibuja mirando a la izquierda, así que su arte no necesita volteo.
+El retrato del menú es `assets/hero_portrait.png`: una tira de 4 frames `idle` en blanco
+y negro de alto contraste, con contorno blanco, dibujada a 5x y recortada por el borde
+derecho de la pantalla. Es un archivo aparte, así que si cambias el spritesheet conviene
+rehacerlo.
 
 Puedes sustituirlos por tu propio arte manteniendo la rejilla, o ajustar
-`frameWidth`, `frameHeight` y los índices de frames en
-`data/animations.json`. El tamaño del héroe está en `ENTITY_LAYOUT` (`js/main.js`); el
+`frameWidth`, `frameHeight`, `anchorX`/`anchorY` (el punto del frame que pisa el
+suelo) y los índices de frames en `data/animations.json`. El héroe no está
+centrado en su frame —la espada ocupa el lado derecho—, por eso su ancla son los
+pies y no el centro. El tamaño del héroe está en `ENTITY_LAYOUT` (`js/main.js`); el
 de cada sombra sale de su `height` en `data/enemies.json`, así que las últimas se ven
 más grandes.
 

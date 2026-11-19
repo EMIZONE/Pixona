@@ -54,6 +54,7 @@ export class BattleEngine {
    */
   enter(enemy) {
     clearTimeout(this.outcomeTimer);
+    this.ui.clearGuards();
     this.enemy = enemy;
     this.state = BATTLE_STATE.INIT;
     this.ui.setEnemyName(enemy.name);
@@ -94,6 +95,7 @@ export class BattleEngine {
 
     switch (newState) {
       case BATTLE_STATE.PLAYER_TURN:
+        this.ui.clearGuard('player');
         this.ui.showTurn('player');
         this.ui.enableMenu(true);
         break;
@@ -103,6 +105,7 @@ export class BattleEngine {
         break;
 
       case BATTLE_STATE.ENEMY_TURN:
+        this.ui.clearGuard('enemy');
         this.ui.showTurn('enemy');
         this.ui.enableMenu(false);
         this.processEnemyTurn().catch((error) => this.recover(error));
@@ -123,6 +126,7 @@ export class BattleEngine {
    * retardo justo para que se vea la reacción.
    */
   endBattle(victory) {
+    this.ui.clearGuards();
     this.ui.showTurn('over');
     this.ui.enableMenu(false);
     this.ui.logAction(victory ? '¡VICTORIA!' : 'DERROTA.', 'accent');
@@ -177,6 +181,9 @@ export class BattleEngine {
       // Deja respirar el último frame antes de anunciar el turno del enemigo.
       await wait(TURN_PAUSE);
       if (this.state !== BATTLE_STATE.RESOLVING) return;
+      // El banner espera a que el número de daño termine de desvanecerse.
+      await wait(this.ui.damageFloatRemaining());
+      if (this.state !== BATTLE_STATE.RESOLVING) return;
       this.setState(BATTLE_STATE.ENEMY_TURN);
     } catch (error) {
       this.recover(error);
@@ -202,6 +209,7 @@ export class BattleEngine {
 
       case 'BLOCK':
         this.player.isBlocking = true;
+        this.ui.showGuard('player', 'block');
         this.ui.logAction(`${this.player.name} adopta postura de bloqueo.`);
         return true;
 
@@ -210,6 +218,7 @@ export class BattleEngine {
           return this.reject('SP insuficiente para esquivar.');
         }
         this.player.isDodging = true;
+        this.ui.showGuard('player', 'dodge');
         this.ui.logAction(`${this.player.name} se prepara para esquivar.`);
         return true;
 
@@ -293,6 +302,7 @@ export class BattleEngine {
       await this.dealDamage('enemy', this.player, atk, usesSkill ? 'usa una habilidad' : 'ataca');
     } else {
       this.enemy.isBlocking = true;
+      this.ui.showGuard('enemy', 'block');
       this.ui.logAction(`${this.enemy.name} se bloquea.`);
     }
 
@@ -300,6 +310,9 @@ export class BattleEngine {
     if (this.checkEndConditions()) return;
 
     await wait(TURN_PAUSE);
+    if (this.state !== BATTLE_STATE.ENEMY_TURN) return;
+    // El banner espera a que el número de daño termine de desvanecerse.
+    await wait(this.ui.damageFloatRemaining());
     if (this.state !== BATTLE_STATE.ENEMY_TURN) return;
     this.setState(BATTLE_STATE.PLAYER_TURN);
   }

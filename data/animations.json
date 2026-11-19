@@ -1,21 +1,25 @@
 {
   "hero": {
-    "frameWidth": 48,
-    "frameHeight": 48,
+    "frameWidth": 160,
+    "frameHeight": 160,
+    "anchorX": 38.5,
+    "anchorY": 157,
     "animations": {
       "idle": {
         "frames": [0, 1, 2, 3],
         "fps": 8
       },
       "attack": {
-        "frames": [4, 5, 6, 7],
-        "fps": 8
+        "frames": [4, 5, 6],
+        "fps": 6
       }
     }
   },
   "enemy": {
     "frameWidth": 64,
     "frameHeight": 64,
+    "anchorX": 32,
+    "anchorY": 64,
     "animations": {
       "idle": {
         "frames": [0, 1, 2, 3],

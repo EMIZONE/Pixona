@@ -34,6 +34,10 @@ function createUi() {
     enableMenu: noop,
     showHit: noop,
     showRecoil: noop,
+    damageFloatRemaining: () => 0,
+    showGuard: noop,
+    clearGuard: noop,
+    clearGuards: noop,
     setItemLabel: noop
   };
 }

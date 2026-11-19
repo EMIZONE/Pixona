@@ -49,6 +49,7 @@ data/equipment.json           armor (def/speed/evasion) and accessory catalogs
 data/items.json               item catalog (heal / sp)
 data/requests.json            requests: target shadow, numeric reward, status
 data/progression.json         xp thresholds per level
+data/weather.json             weather location: city, latitude, longitude, refresh minutes
 data/animations.json          sprite-sheet metadata: frame size, frame ids, fps
 assets/background.png         1920x1080 battle backdrop (palette PNG)
 js/main.js                    bootstrap + render loop + menu wiring
@@ -65,6 +66,8 @@ js/ui/BattleMenu.js           in-battle action buttons + keyboard
 js/ui/TurnBanner.js           turn band + persistent turn chip
 js/ui/EncounterTransition.js  black fade + sliding next-shadow card
 js/ui/ResultScreen.js         final EXP/level/money/loot screen + restart
+js/ui/WeatherWidget.js        top-left current-weather card + 10-minute refresh loop
+js/services/WeatherService.js Open-Meteo `current` query (no API key)
 js/graphics/SpriteAnimator.js frame animation + two-color alpha outline
 js/graphics/BackgroundRenderer.js  stage transform (1920x1080, cover, bottom-anchored)
 js/graphics/GroundShadow.js   cached oval shadow texture + accent rim
@@ -73,6 +76,7 @@ js/utils/dom.js               createNode/createButton
 js/utils/format.js            formatMoney (es-MX thousands)
 js/utils/keys.js              navigation key map shared by both menus
 tests/combat.test.js          node:test suite for logic
+tests/weather.test.js         node:test suite for WMO labels + weather.json
 serve.ps1 / start.bat         dev server / launcher
 docs/*.png, docs/*.mmd        README screenshots and diagrams
 ```
@@ -89,7 +93,9 @@ docs/*.png, docs/*.mmd        README screenshots and diagrams
 - The enemy HP card is positioned every frame over its head; the player card and the
   action menu share `.battle-actions` so L/XL text never overlaps. The character on turn
   grows 7 % (`TURN_SCALE`, 200 ms smoothing); the enemy shadow fades on death.
-- HUD z-index order: turn band 4, `.battle-actions`/`.battle-log` 5, `.enemy-status` 6.
+- HUD z-index order: `.battle-actions`/`.battle-log` 5, `.enemy-status` 6, hit flash 9,
+  `.weather-widget` 11, `.open-menu-btn` 12, `.turn-chip`/`.damage-float`/`.guard-float`
+  14, turn band 15 (topmost HUD; the modal overlays at 100+ still cover it).
 
 ### Menu
 - `MainMenu.js` is only the shell. Each panel is `{ label, tall?, render(menu) }` in
@@ -102,13 +108,30 @@ docs/*.png, docs/*.mmd        README screenshots and diagrams
 - OBJETO marks the active item; SISTEMA owns `menu.settings` (`accent`, `fontPx`),
   persisted in `localStorage` under `pixona.settings` and re-applied at boot.
 
+### Weather
+- `WeatherWidget` fills `#weather-widget` in the top-left HUD (z 11) from Open-Meteo;
+  `WeatherService` only fetches the `current` block. Coordinates and `refreshMinutes`
+  live in `data/weather.json`.
+- A failed fetch keeps the last reading and retries after 60 s; `online` and
+  `visibilitychange` refresh early. The CSP `connect-src` must list
+  `https://api.open-meteo.com`; a different provider needs that host plus
+  `WeatherService` updated.
+- `max-height: 680px` compacts the card and drops the wind/humidity line;
+  `max-width: 760px` hides the `CLIMA ·` prefix, so it never covers ATACAR or MENÚ.
+
 ### Combat
 - States `INIT → PLAYER_TURN → RESOLVING → ENEMY_TURN → …`. `RESOLVING` locks the menu
   and `M`; a rejected action restores `PLAYER_TURN` without spending the turn.
 - Math: evasion first (`isDodging` +0.5) → `max(1, atk - def)` → block
   `(1 - blockReduce)` → `max(1, …)`, HP clamped at 0. Recoil is direct HP loss.
-- Timings: attack wind-up 250 ms, recovery 350 ms, turn pause 250 ms, enemy think
-  850 ms, victory 1500 ms / defeat 1000 ms.
+- Timings: attack wind-up 250 ms, recovery 350 ms, turn pause 250 ms, damage float
+  1650 ms (the next turn banner waits for it to disappear), enemy think 850 ms,
+  victory 1500 ms / defeat 1000 ms.
+- Block/dodge shows a persistent `BLOQUEO`/`ESQUIVA` tag above that side's head
+  (`guard-float`, anchored with `getGuardPoint` at 0.98 of the render height) and it is
+  removed 2.2 s after that side's next turn starts, so it can be read past the banner.
+  A blocked hit shows only the reduced damage number; a passive evasion keeps the
+  one-shot `ESQUIVA`. Floats live inside `#ui-layer` so the z-15 banner covers them.
 - VEL decides who opens a fight (`start()`); the faster side acts first.
 - Shadows may replace their 70 % attack with a skill (`skillChance`, `skillPower` in
   `data/enemies.json`); the player's skill is the menu action (15 SP, ×1.5).
@@ -122,7 +145,8 @@ docs/*.png, docs/*.mmd        README screenshots and diagrams
 
 ### Visuals
 - Fonts: `--font-display` is Silkscreen (pixel headings), `--font-ui` is Pixelify Sans
-  (everything else); both come from Google Fonts and the CSP allows only those hosts.
+  (everything else); both come from Google Fonts. The CSP allows those hosts plus
+  `api.open-meteo.com` for the weather fetch.
 - `SpriteAnimator` derives the grid from `image.width / frameWidth`; `playOnce` returns
   to `idle`; the two-color outline is cached per frame + color, offset capped at 3.3
   stage units. Hero lunges +1, enemy -1.
@@ -204,8 +228,11 @@ Menu highlighting is transition-less on purpose.
 - Money/EXP/level are shown but there is no shop or cross-reload progression.
 - Requests have one completion step (`target` shadow) and no follow-up phases.
 - All gear is available from the start.
-- The menu portrait is frame 0 of the hero sheet scaled 7x in CSS: update
-  `.menu-portrait` if the frame size changes.
+- The weather uses the fixed coordinate from `data/weather.json`; it does not ask for
+  geolocation. Changing the city is a JSON edit.
+- The menu portrait is a separate `assets/hero_portrait.png`: a 4-frame idle strip
+  (105x150 each) in high-contrast black-and-white with a 1 px white outline, scaled 5x
+  in CSS and clipped by the right screen edge. Regenerate it if the hero art changes.
 - The backdrop is a flat image; it does not animate or tint with the accent.
 - Ready for GitHub Pages (relative paths + `.nojekyll`); no CI.
 - Fonts load from Google Fonts (the CSP allows them); offline falls back to system
